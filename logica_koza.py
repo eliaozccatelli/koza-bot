@@ -109,9 +109,9 @@ class KozaEngine:
         return None, None, None
 
     def get_stats(self, team_id, comp_id):
-        """Recupera statistiche della squadra da TUTTE le partite della stagione"""
+        """Recupera statistiche della squadra da TUTTE le partite della stagione (FINISHED + LIVE)"""
         url = f"https://{API_HOST}/v4/teams/{team_id}/matches"
-        params = {'status': 'FINISHED'}
+        params = {'status': ['FINISHED', 'LIVE']}  # Includi LIVE matches per statistiche accurate
         
         try:
             response = requests.get(url, headers=self.headers, params=params, timeout=API_TIMEOUT)
@@ -580,6 +580,85 @@ class KozaEngine:
             'combos': combos,
             'miglior_combo': combos[0] if combos else None
         }
+
+    def get_competizioni_con_partite(self):
+        """Ritorna lista di competizioni che hanno partite oggi"""
+        competizioni_con_partite = []
+        
+        try:
+            for comp_id, comp_name in list(self.competitions.items())[:15]:  # Top 15
+                url = f"https://{API_HOST}/v4/competitions/{comp_id}/matches"
+                params = {'status': 'SCHEDULED'}
+                
+                try:
+                    response = requests.get(url, headers=self.headers, params=params, timeout=API_TIMEOUT)
+                    if response.status_code != 200:
+                        continue
+                    
+                    data = response.json()
+                    matches = data.get('matches', [])
+                    
+                    # Filtra solo partite di oggi
+                    today = datetime.now().date()
+                    partite_oggi = []
+                    
+                    for match in matches:
+                        match_date_str = match.get('utcDate', '')
+                        try:
+                            parsed_date = datetime.fromisoformat(match_date_str.replace('Z', '+00:00'))
+                            if parsed_date.date() == today:
+                                partite_oggi.append(match)
+                        except:
+                            pass
+                    
+                    if partite_oggi:
+                        competizioni_con_partite.append((comp_id, comp_name))
+                
+                except Exception as e:
+                    logger.warning(f"Errore competizione {comp_id}: {e}")
+                    continue
+        
+        except Exception as e:
+            logger.error(f"Errore get_competizioni_con_partite: {e}")
+        
+        return competizioni_con_partite
+    
+    def get_partite_campionato(self, comp_id):
+        """Ritorna lista di partite di un campionato (oggi)"""
+        partite = []
+        
+        try:
+            url = f"https://{API_HOST}/v4/competitions/{comp_id}/matches"
+            params = {'status': 'SCHEDULED'}
+            
+            response = requests.get(url, headers=self.headers, params=params, timeout=API_TIMEOUT)
+            if response.status_code != 200:
+                return []
+            
+            data = response.json()
+            matches = data.get('matches', [])
+            
+            # Filtra solo partite di oggi
+            today = datetime.now().date()
+            
+            for match in matches:
+                match_date_str = match.get('utcDate', '')
+                match_id = match.get('id')
+                
+                try:
+                    parsed_date = datetime.fromisoformat(match_date_str.replace('Z', '+00:00'))
+                    if parsed_date.date() == today:
+                        home_team = match['homeTeam'].get('name', 'Unknown')
+                        away_team = match['awayTeam'].get('name', 'Unknown')
+                        partite.append((home_team, away_team, match_id))
+                except Exception as e:
+                    logger.warning(f"Errore parsing partita {match_id}: {e}")
+            
+            return partite
+        
+        except Exception as e:
+            logger.error(f"Errore get_partite_campionato: {e}")
+            return []
 
     def formatta_schedina(self, schedina_data, importo_scommessa=100):
         """Formatta la schedina per Telegram"""

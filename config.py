@@ -53,9 +53,9 @@ HEAD_TO_HEAD_MATCHES = 5
 
 # Soglia minima di match per accettare una squadra (0-100)
 # 75 = accetta solo match molto simili
-# 70 = più permissivo
-# 80+ = molto rigoroso
-FUZZY_MATCH_THRESHOLD = 75
+# 70 = più permissivo  
+# 80+ = molto rigoroso (RACCOMANDATO per evitare Roma => Romania)
+FUZZY_MATCH_THRESHOLD = 82
 
 
 # ════════════════════════════════════════════════════════════════
