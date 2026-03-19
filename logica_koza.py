@@ -111,17 +111,22 @@ class KozaEngine:
     def get_stats(self, team_id, comp_id):
         """Recupera statistiche della squadra da TUTTE le partite della stagione (FINISHED + LIVE)"""
         url = f"https://{API_HOST}/v4/teams/{team_id}/matches"
-        params = {'status': ['FINISHED', 'LIVE']}  # Includi LIVE matches per statistiche accurate
+        # football-data.org si aspetta una stringa CSV per più stati,
+        # non una lista Python, altrimenti può ignorare il filtro e
+        # restituire 0 partite (poi si ricade sempre sulle stats di default)
+        params = {'status': 'FINISHED,LIVE'}  # Includi LIVE matches per statistiche accurate
         
         try:
             response = requests.get(url, headers=self.headers, params=params, timeout=API_TIMEOUT)
             if response.status_code != 200:
+                logger.warning(f"get_stats: risposta non OK ({response.status_code}) per team_id={team_id}")
                 return self._default_stats()
             
             data = response.json()
             matches = data.get('matches', [])
             
             if not matches:
+                logger.warning(f"get_stats: nessuna partita trovata per team_id={team_id}")
                 return self._default_stats()
             
             # Calcola statistiche da TUTTE le partite della stagione
@@ -586,9 +591,13 @@ class KozaEngine:
         competizioni_con_partite = []
         
         try:
-            for comp_id, comp_name in list(self.competitions.items())[:15]:  # Top 15
+            # Non limitiamo più a 15 competizioni, così Europa League,
+            # Conference, ecc. non vengono escluse in base all'ordine
+            for comp_id, comp_name in list(self.competitions.items()):
                 url = f"https://{API_HOST}/v4/competitions/{comp_id}/matches"
-                params = {'status': 'SCHEDULED'}
+                # Alcune partite risultano come TIMED invece che SCHEDULED,
+                # quindi chiediamo entrambe per non perderle
+                params = {'status': 'SCHEDULED,TIMED'}
                 
                 try:
                     response = requests.get(url, headers=self.headers, params=params, timeout=API_TIMEOUT)
@@ -629,7 +638,8 @@ class KozaEngine:
         
         try:
             url = f"https://{API_HOST}/v4/competitions/{comp_id}/matches"
-            params = {'status': 'SCHEDULED'}
+            # Come sopra: includiamo sia SCHEDULED che TIMED
+            params = {'status': 'SCHEDULED,TIMED'}
             
             response = requests.get(url, headers=self.headers, params=params, timeout=API_TIMEOUT)
             if response.status_code != 200:

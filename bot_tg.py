@@ -179,6 +179,60 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
+    # Eventuale data (es. 20/03, 20-03-2026, 20 marzo) in coda al messaggio
+    data_partita = None
+    if len(parti) >= 3:
+        # 1) Formati numerici tipo 20/03, 20-03-2026
+        date_formats = ["%d/%m", "%d-%m", "%d/%m/%Y", "%d-%m-%Y"]
+        for start_offset in range(2, 0, -1):
+            if len(parti) - start_offset < 1:
+                continue
+            candidate = " ".join(parti[-start_offset:])
+            parsed_ok = False
+
+            # Prova formati numerici
+            for fmt in date_formats:
+                try:
+                    parsed = datetime.strptime(candidate, fmt)
+                    if "%Y" not in fmt:
+                        parsed = parsed.replace(year=datetime.now().year)
+                    data_partita = parsed
+                    parti = parti[:-start_offset]
+                    parsed_ok = True
+                    logger.info(f"[handle_text] Rilevata data numerica '{candidate}' -> {data_partita.date()}")
+                    break
+                except ValueError:
+                    continue
+
+            # 2) Formati testuali italiani tipo "20 marzo", "20 mar 2026"
+            if not parsed_ok:
+                mesi_it = {
+                    "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4,
+                    "maggio": 5, "giugno": 6, "luglio": 7, "agosto": 8,
+                    "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12,
+                    "gen": 1, "feb": 2, "mar": 3, "apr": 4, "mag": 5, "giu": 6,
+                    "lug": 7, "ago": 8, "set": 9, "ott": 10, "nov": 11, "dic": 12,
+                }
+                tokens = candidate.lower().replace(",", "").split()
+                # Possibili pattern: "20 marzo", "20 marzo 2026", "20 mar", "20 mar 2026"
+                if len(tokens) >= 2 and tokens[0].isdigit() and tokens[1] in mesi_it:
+                    giorno = int(tokens[0])
+                    mese = mesi_it[tokens[1]]
+                    anno = datetime.now().year
+                    if len(tokens) >= 3 and tokens[2].isdigit():
+                        anno = int(tokens[2])
+                    try:
+                        parsed = datetime(anno, mese, giorno)
+                        data_partita = parsed
+                        parti = parti[:-start_offset]
+                        logger.info(f"[handle_text] Rilevata data testuale '{candidate}' -> {data_partita.date()}")
+                        parsed_ok = True
+                    except ValueError:
+                        pass
+
+            if parsed_ok:
+                break
+
     squadra1 = None
     squadra2 = None
     
@@ -218,7 +272,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         comp_id = koza_engine.team_competitions.get(id_casa)
         
-        match_info = koza_engine.trova_prossima_partita(id_casa, id_trasf)
+        # Se l'utente ha specificato una data (es. "Inter Milan 20/03"),
+        # cerchiamo la partita esattamente in quel giorno
+        match_info = koza_engine.trova_prossima_partita(
+            id_casa,
+            id_trasf,
+            data_partita=data_partita
+        )
         if not match_info.get('found'):
             await update.message.reply_text(
                 f"❌ **PARTITA NON TROVATA**\n\n"
