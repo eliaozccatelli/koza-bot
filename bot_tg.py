@@ -22,8 +22,8 @@ from telegram.ext import (
     CallbackQueryHandler,
     filters,
 )
-from logica_koza import KozaEngine
-from config import TELEGRAM_TOKEN, LOG_LEVEL
+from logica_koza import KozaEngine, get_koza_engine
+from config import TELEGRAM_TOKEN, LOG_LEVEL, GEMINI_API_KEY
 
 logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -31,78 +31,156 @@ logger = logging.getLogger(__name__)
 koza_engine = None
 
 
+def get_date_buttons():
+    """Genera i 3 pulsanti per la selezione della data."""
+    oggi = datetime.now().date()
+    domani = oggi + timedelta(days=1)
+    dopodomani = oggi + timedelta(days=2)
+    
+    giorni_settimana = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica']
+    
+    return [
+        InlineKeyboardButton(
+            f"📅 Oggi ({oggi.strftime('%d/%m')}) - {giorni_settimana[oggi.weekday()]}",
+            callback_data=f"date_{oggi.isoformat()}"
+        ),
+        InlineKeyboardButton(
+            f"📅 Domani ({domani.strftime('%d/%m')}) - {giorni_settimana[domani.weekday()]}",
+            callback_data=f"date_{domani.isoformat()}"
+        ),
+        InlineKeyboardButton(
+            f"📅 Dopodomani ({dopodomani.strftime('%d/%m')}) - {giorni_settimana[dopodomani.weekday()]}",
+            callback_data=f"date_{dopodomani.isoformat()}"
+        ),
+    ]
+
+
 # ==================== INLINE BUTTONS SYSTEM ====================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Comando /start con inline buttons per campionati"""
+    """Comando /start - mostra selezione data"""
     messaggio = (
-        "⚽ **KOZA Bot 2.0** 🚀\n\n"
-        "Scegli un campionato per analizzare le partite di oggi.\n\n"
-        "📅 **Data**: " + datetime.now().strftime('%d/%m/%Y')
+        "⚽ **KOZA Bot 3.0** 🤖\n\n"
+        "Seleziona una data per vedere le partite disponibili:\n\n"
+        "🤖 *Powered by Google Gemini AI*"
     )
     
     try:
-        campionati = koza_engine.get_competizioni_con_partite()
+        date_buttons = get_date_buttons()
         
-        if not campionati:
-            await update.message.reply_text("⚠️ **Nessuna partita oggi**", parse_mode='Markdown')
-            return
-        
-        keyboard = []
-        for comp_id, comp_name in campionati:
-            keyboard.append([
-                InlineKeyboardButton(f"⚽ {comp_name}", callback_data=f"comp_{comp_id}")
-            ])
-        
+        keyboard = [[btn] for btn in date_buttons]
         keyboard.append([
             InlineKeyboardButton("✏️ Scrivi manualmente", callback_data="scrivi_manuale")
         ])
         
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(messaggio, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        if update.message:
+            await update.message.reply_text(messaggio, reply_markup=reply_markup, parse_mode='Markdown')
+        elif update.callback_query:
+            await update.callback_query.edit_message_text(messaggio, reply_markup=reply_markup, parse_mode='Markdown')
         
     except Exception as e:
         logger.error(f"Errore in start: {e}")
-        await update.message.reply_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
+        text = f"❌ Errore: `{str(e)}`"
+        if update.message:
+            await update.message.reply_text(text, parse_mode='Markdown')
+        elif update.callback_query:
+            await update.callback_query.edit_message_text(text, parse_mode='Markdown')
 
 
-async def button_campionato(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Gestisce il click su un campionato"""
+async def button_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Gestisce il click su una data - mostra competizioni"""
     query = update.callback_query
     await query.answer()
     
     try:
-        if query.data == "scrivi_manuale":
+        # Estrai data dal callback_data (formato: date_YYYY-MM-DD)
+        data_str = query.data.split("_")[1]
+        selected_date = datetime.fromisoformat(data_str).date()
+        
+        # Salva data nel context per usarla nei prossimi step
+        context.user_data['selected_date'] = selected_date
+        context.user_data['selected_date_str'] = selected_date.strftime('%d/%m/%Y')
+        
+        # Recupera competizioni per questa data
+        campionati = koza_engine.get_competizioni_con_partite(selected_date)
+        
+        if not campionati:
+            keyboard = [[InlineKeyboardButton("◀️ Torna indietro", callback_data="back_date")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             await query.edit_message_text(
-                "✏️ **Scrivi due squadre separate da spazio:**\n\n"
-                "`Inter Milan`\n"
-                "`Bayern Atalanta`\n\n"
-                "Oppure con 'vs': `Inter vs Milan`",
+                f"⚠️ **Nessuna partita disponibile** il {selected_date.strftime('%d/%m/%Y')}",
+                reply_markup=reply_markup,
                 parse_mode='Markdown'
             )
             return
         
-        comp_id = int(query.data.split("_")[1])
-        partite = koza_engine.get_partite_campionato(comp_id)
+        messaggio = f"📅 **Data selezionata**: {selected_date.strftime('%d/%m/%Y')}\n\nScegli un campionato:"
+        
+        keyboard = []
+        for comp_id, comp_name in campionati:
+            keyboard.append([
+                InlineKeyboardButton(f"⚽ {comp_name}", callback_data=f"comp_{comp_id}_{data_str}")
+            ])
+        
+        keyboard.append([
+            InlineKeyboardButton("◀️ Torna alle date", callback_data="back_date")
+        ])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(messaggio, reply_markup=reply_markup, parse_mode='Markdown')
+        
+    except Exception as e:
+        logger.error(f"Errore in button_data: {e}")
+        await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
+
+
+async def button_campionato(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Gestisce il click su un campionato - mostra partite"""
+    query = update.callback_query
+    await query.answer()
+    
+    try:
+        # Estrai comp_id e data dal callback_data (formato: comp_COMPID_YYYY-MM-DD)
+        parts = query.data.split("_")
+        comp_id = parts[1]  # ID è stringa (es: "IT1", "EN1")
+        data_str = parts[2] if len(parts) > 2 else None
+        selected_date = datetime.fromisoformat(data_str).date() if data_str else datetime.now().date()
+        
+        partite = koza_engine.get_partite_campionato(comp_id, selected_date)
         
         if not partite:
-            await query.edit_message_text("⚠️ Nessuna partita in questo campionato oggi")
+            keyboard = [[InlineKeyboardButton("◀️ Indietro", callback_data=f"back_comp_{data_str}" if data_str else "back_date")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(
+                f"⚠️ Nessuna partita in questo campionato il {selected_date.strftime('%d/%m/%Y')}",
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
             return
         
         comp_name = koza_engine.competitions.get(comp_id, "Campionato")
-        messaggio = f"⚽ **{comp_name}** ({datetime.now().strftime('%d/%m/%Y')})\n\nScegli una partita:\n"
+        messaggio = f"⚽ **{comp_name}** ({selected_date.strftime('%d/%m/%Y')})\n\nScegli una partita:\n"
         
         keyboard = []
         for team1, team2, match_id in partite:
+            # Salva info partita nel context per recuperarla dopo
+            if 'partite_disponibili' not in context.user_data:
+                context.user_data['partite_disponibili'] = {}
+            context.user_data['partite_disponibili'][match_id] = {
+                'casa': team1,
+                'trasferta': team2
+            }
             keyboard.append([
                 InlineKeyboardButton(
                     f"🔥 {team1} vs {team2}",
-                    callback_data=f"match_{match_id}_{team1}_{team2}"
+                    callback_data=f"match_{match_id}"
                 )
             ])
         
         keyboard.append([
-            InlineKeyboardButton("◀️ Indietro", callback_data="back_campionati")
+            InlineKeyboardButton("◀️ Torna ai campionati", callback_data=f"back_comp_{data_str}" if data_str else "back_date")
         ])
         
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -113,46 +191,54 @@ async def button_campionato(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
 
 
-async def button_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Gestisce il click su una partita"""
+async def button_scrivi_manuale(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Gestisce il click su 'Scrivi manualmente'"""
     query = update.callback_query
-    await query.answer("⏳ Analizzando...")
+    await query.answer()
+    
+    await query.edit_message_text(
+        "✏️ **Scrivi due squadre separate da spazio:**\n\n"
+        "`Inter Milan`\n"
+        "`Bayern Atalanta`\n\n"
+        "Oppure con 'vs': `Inter vs Milan`",
+        parse_mode='Markdown'
+    )
+
+
+async def button_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Gestisce il click su una partita - usa Gemini AI"""
+    query = update.callback_query
+    await query.answer("⏳ Analizzo con Gemini AI...")
     
     try:
-        parts = query.data.split("_", 3)
-        if len(parts) < 4:
+        # Estrai match_id dal callback_data (formato: match_MATCHID)
+        parts = query.data.split("_", 1)
+        if len(parts) < 2:
             await query.edit_message_text("❌ Errore nel parsing")
             return
         
-        squadra1 = parts[2]
-        squadra2 = parts[3]
+        match_id = parts[1]
         
-        id_casa, nome_casa, comp_casa = koza_engine.trova_squadra(squadra1)
-        id_trasf, nome_trasf, comp_trasf = koza_engine.trova_squadra(squadra2)
+        # Recupera nomi squadre dal context
+        partite_cache = context.user_data.get('partite_disponibili', {})
+        partita_info = partite_cache.get(match_id, {})
         
-        if not id_casa or not id_trasf:
-            await query.edit_message_text(
-                f"❌ **SQUADRA NON TROVATA**\n\n"
-                f"Verifica i nomi e riprova.",
-                parse_mode='Markdown'
-            )
-            return
+        if partita_info:
+            squadra1 = partita_info['casa']
+            squadra2 = partita_info['trasferta']
+        else:
+            # Fallback: estrai dal match_id (formato: IT1_1)
+            squadra1 = "Casa"
+            squadra2 = "Trasferta"
         
-        comp_id = koza_engine.team_competitions.get(id_casa)
+        # Usa direttamente Gemini AI per analizzare
+        analisi = koza_engine.analizza_partita(squadra1, squadra2)
+        analisi["squadra_casa"] = squadra1
+        analisi["squadra_trasferta"] = squadra2
+        messaggio = koza_engine.formatta_output(analisi)
         
-        match_info = koza_engine.trova_prossima_partita(id_casa, id_trasf)
-        if not match_info.get('found'):
-            await query.edit_message_text(
-                f"❌ **PARTITA NON TROVATA**\n\n"
-                f"La partita {nome_casa} vs {nome_trasf} non è in programma.",
-                parse_mode='Markdown'
-            )
-            return
-        
-        pronostico = koza_engine.calcola_pronostico(id_casa, nome_casa, id_trasf, nome_trasf, comp_id)
-        messaggio = koza_engine.formatta_output(pronostico)
-        
-        await query.edit_message_text(messaggio, parse_mode='Markdown')
+        # Invia senza Markdown per evitare errori di parsing
+        await query.edit_message_text(messaggio)
         
     except Exception as e:
         logger.error(f"Errore in button_partita: {e}")
@@ -160,15 +246,27 @@ async def button_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def button_indietro(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Torna ai campionati"""
+    """Gestisce i pulsanti indietro (back_date, back_comp_*)"""
     query = update.callback_query
     await query.answer()
     
-    await start(update, context)
+    try:
+        if query.data == "back_date":
+            # Torna alla selezione date
+            await start(update, context)
+        elif query.data.startswith("back_comp_"):
+            # Torna alle competizioni di una specifica data
+            data_str = query.data.split("_")[2]
+            # Simula click sulla data
+            query.data = f"date_{data_str}"
+            await button_data(update, context)
+    except Exception as e:
+        logger.error(f"Errore in button_indietro: {e}")
+        await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Gestisce testo libero per ricerca manuale"""
+    """Gestisce testo libero per ricerca manuale - usa Gemini AI"""
     text = update.message.text.strip()
     parti = text.split()
     
@@ -179,60 +277,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    # Eventuale data (es. 20/03, 20-03-2026, 20 marzo) in coda al messaggio
-    data_partita = None
-    if len(parti) >= 3:
-        # 1) Formati numerici tipo 20/03, 20-03-2026
-        date_formats = ["%d/%m", "%d-%m", "%d/%m/%Y", "%d-%m-%Y"]
-        for start_offset in range(2, 0, -1):
-            if len(parti) - start_offset < 1:
-                continue
-            candidate = " ".join(parti[-start_offset:])
-            parsed_ok = False
-
-            # Prova formati numerici
-            for fmt in date_formats:
-                try:
-                    parsed = datetime.strptime(candidate, fmt)
-                    if "%Y" not in fmt:
-                        parsed = parsed.replace(year=datetime.now().year)
-                    data_partita = parsed
-                    parti = parti[:-start_offset]
-                    parsed_ok = True
-                    logger.info(f"[handle_text] Rilevata data numerica '{candidate}' -> {data_partita.date()}")
-                    break
-                except ValueError:
-                    continue
-
-            # 2) Formati testuali italiani tipo "20 marzo", "20 mar 2026"
-            if not parsed_ok:
-                mesi_it = {
-                    "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4,
-                    "maggio": 5, "giugno": 6, "luglio": 7, "agosto": 8,
-                    "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12,
-                    "gen": 1, "feb": 2, "mar": 3, "apr": 4, "mag": 5, "giu": 6,
-                    "lug": 7, "ago": 8, "set": 9, "ott": 10, "nov": 11, "dic": 12,
-                }
-                tokens = candidate.lower().replace(",", "").split()
-                # Possibili pattern: "20 marzo", "20 marzo 2026", "20 mar", "20 mar 2026"
-                if len(tokens) >= 2 and tokens[0].isdigit() and tokens[1] in mesi_it:
-                    giorno = int(tokens[0])
-                    mese = mesi_it[tokens[1]]
-                    anno = datetime.now().year
-                    if len(tokens) >= 3 and tokens[2].isdigit():
-                        anno = int(tokens[2])
-                    try:
-                        parsed = datetime(anno, mese, giorno)
-                        data_partita = parsed
-                        parti = parti[:-start_offset]
-                        logger.info(f"[handle_text] Rilevata data testuale '{candidate}' -> {data_partita.date()}")
-                        parsed_ok = True
-                    except ValueError:
-                        pass
-
-            if parsed_ok:
-                break
-
     squadra1 = None
     squadra2 = None
     
@@ -253,42 +297,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.chat.send_action("typing")
     
     try:
-        id_casa, nome_casa, comp_casa = koza_engine.trova_squadra(squadra1)
-        id_trasf, nome_trasf, comp_trasf = koza_engine.trova_squadra(squadra2)
-        
-        if not id_casa:
-            await update.message.reply_text(
-                f"❌ **SQUADRA NON TROVATA**\n\n{squadra1}",
-                parse_mode='Markdown'
-            )
-            return
-        
-        if not id_trasf:
-            await update.message.reply_text(
-                f"❌ **SQUADRA NON TROVATA**\n\n{squadra2}",
-                parse_mode='Markdown'
-            )
-            return
-        
-        comp_id = koza_engine.team_competitions.get(id_casa)
-        
-        # Se l'utente ha specificato una data (es. "Inter Milan 20/03"),
-        # cerchiamo la partita esattamente in quel giorno
-        match_info = koza_engine.trova_prossima_partita(
-            id_casa,
-            id_trasf,
-            data_partita=data_partita
-        )
-        if not match_info.get('found'):
-            await update.message.reply_text(
-                f"❌ **PARTITA NON TROVATA**\n\n"
-                f"La partita {nome_casa} vs {nome_trasf} non è in programma.",
-                parse_mode='Markdown'
-            )
-            return
-        
-        pronostico = koza_engine.calcola_pronostico(id_casa, nome_casa, id_trasf, nome_trasf, comp_id)
-        messaggio = koza_engine.formatta_output(pronostico)
+        # Usa direttamente Gemini AI per analizzare
+        analisi = koza_engine.analizza_partita(squadra1, squadra2)
+        analisi["squadra_casa"] = squadra1
+        analisi["squadra_trasferta"] = squadra2
+        messaggio = koza_engine.formatta_output(analisi)
         await update.message.reply_text(messaggio, parse_mode='Markdown')
         
     except Exception as e:
@@ -335,15 +348,16 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /about"""
     messaggio = (
-        "🤖 **KOZA Bot 2.0**\n\n"
-        "Sistema intelligente con inline buttons\n"
-        "Analisi calcistica avanzata\n\n"
+        "🤖 **KOZA Bot 3.0 - Gemini Edition**\n\n"
+        "Sistema di analisi calcistica basato su AI\n"
+        "Powered by Google Gemini 2.0 Flash\n\n"
         "📊 Funzionalità:\n"
-        "✅ Pulsanti interattivi\n"
-        "✅ Partite LIVE\n"
-        "✅ Poisson Distribution\n"
-        "✅ Expected Goals\n\n"
-        "👤 Team KOZA - Marzo 2026"
+        "✅ Analisi AI in tempo reale\n"
+        "✅ Pronostici con confidence score\n"
+        "✅ Forma squadre e assenti\n"
+        "✅ Scommesse consigliate con quote\n"
+        "✅ Pulsanti interattivi\n\n"
+        "👤 Team KOZA - 2026"
     )
     await update.message.reply_text(messaggio, parse_mode='Markdown')
 
@@ -352,23 +366,19 @@ def main():
     """Avvia il bot"""
     global koza_engine
     
-    print("🚀 Avvio KOZA Bot 2.0 con Inline Buttons...")
+    print("🚀 Avvio KOZA Bot 3.0 con Gemini AI...")
     
-    from config import API_KEY, TELEGRAM_TOKEN as TOKEN_CHECK
-    print(f"🔑 API_KEY caricata: {API_KEY[:20]}..." if API_KEY else "❌ API_KEY NON TROVATA")
+    from config import GEMINI_API_KEY, TELEGRAM_TOKEN as TOKEN_CHECK
+    print(f"🔑 GEMINI_API_KEY caricata: {GEMINI_API_KEY[:20]}..." if GEMINI_API_KEY else "❌ GEMINI_API_KEY NON TROVATA")
     print(f"🔐 TELEGRAM_TOKEN caricato: {TOKEN_CHECK[:10]}..." if TOKEN_CHECK else "❌ TELEGRAM_TOKEN NON TROVATO")
-    print("📊 Fonte API: football-data.org\n")
+    print("🤖 Fonte AI: Google Gemini 2.0 Flash\n")
     
-    koza_engine = KozaEngine()
+    koza_engine = get_koza_engine()
     
     print("📥 Caricamento database squadre...")
     if not koza_engine.carica_database_squadre():
-        print("❌ Errore critico: Impossibile connettersi alle API!")
-        print("Verifica:")
-        print("  • API_KEY valida in config.py")
-        print("  • Connessione internet")
-        print("  • Cota API non superata")
-        return
+        print("⚠️ Impossibile caricare il database squadre.")
+        print("   Il bot parte comunque: puoi usare la modalità manuale (scrivi i nomi delle squadre).")
     
     print("✅ Database caricato!")
     print(f"📊 Squadre caricate: {len(koza_engine.teams_cache)}")
@@ -385,10 +395,11 @@ def main():
     app.add_handler(CommandHandler("schedina", schedina))
     
     # Callback handlers per inline buttons
+    app.add_handler(CallbackQueryHandler(button_data, pattern="^date_"))
     app.add_handler(CallbackQueryHandler(button_campionato, pattern="^comp_"))
     app.add_handler(CallbackQueryHandler(button_partita, pattern="^match_"))
-    app.add_handler(CallbackQueryHandler(button_indietro, pattern="^back_campionati$"))
-    app.add_handler(CallbackQueryHandler(lambda u, c: button_campionato(u, c), pattern="^scrivi_manuale$"))
+    app.add_handler(CallbackQueryHandler(button_indietro, pattern="^back_"))
+    app.add_handler(CallbackQueryHandler(button_scrivi_manuale, pattern="^scrivi_manuale$"))
     
     # Message handler per testo libero
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
