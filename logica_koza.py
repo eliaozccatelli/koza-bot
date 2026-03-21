@@ -16,6 +16,7 @@ from config import (
 )
 from gemini_engine import GeminiEngine, get_gemini_engine
 from sportsdb_engine import SportsDBEngine, get_sportsdb_engine
+from team_ratings import get_team_form
 from teams_fallback import SQUADRE_FALLBACK, COMPETIZIONI_FALLBACK
 
 logging.basicConfig(level=LOG_LEVEL)
@@ -141,7 +142,7 @@ class KozaEngine:
         )
 
     def formatta_output(self, analisi):
-        """Formatta l'output dell'analisi per Telegram."""
+        """Formatta output compatto e professionale per Telegram."""
         pronostico = analisi.get("pronostico", {})
         probabilita = analisi.get("probabilita", {})
         info_analisi = analisi.get("analisi", {})
@@ -150,82 +151,34 @@ class KozaEngine:
         casa = analisi.get("squadra_casa", "Casa")
         trasferta = analisi.get("squadra_trasferta", "Trasferta")
         
-        msg = (
-            f"🤖 **ANALISI KOZA - Powered by Gemini AI**\n"
-            f"{'='*45}\n\n"
-            f"🏟 **{casa.upper()}** vs **{trasferta.upper()}**\n\n"
-        )
+        # Header con emoji e nomi squadre
+        msg = f"⚽ **{casa}** vs **{trasferta}**\n"
         
-        # Pronostico principale
+        # Pronostico principale in riga singola
         risultato = pronostico.get("risultato_esatto", "N/A")
         confidence = pronostico.get("confidence", 50)
-        vincitore = pronostico.get("vincitore", "incerto")
+        msg += f"🎯 Pronostico: `{risultato}` | Confidenza: {confidence}%\n\n"
         
-        msg += (
-            f"🎯 **PRONOSTICO**: `{risultato}`\n"
-            f"💡 **Confidence**: {confidence}%\n"
-            f"🏆 **Favorito**: {vincitore}\n\n"
-        )
+        # Probabilità in formato tabellare compatto
+        msg += "📊 Probabilità:\n"
+        msg += f"   1: {probabilita.get('1', 33):.0f}% | X: {probabilita.get('X', 33):.0f}% | 2: {probabilita.get('2', 33):.0f}%\n"
+        msg += f"   Over 2.5: {probabilita.get('over25', 50)}% | Gol: {probabilita.get('gol', 50)}%\n\n"
         
-        # Probabilità
-        msg += f"📊 **PROBABILITA'**:\n"
-        msg += f"   • 1 (Casa): {probabilita.get('1', 33)}%\n"
-        msg += f"   • X (Pareggio): {probabilita.get('X', 33)}%\n"
-        msg += f"   • 2 (Trasferta): {probabilita.get('2', 33)}%\n"
-        msg += f"   • Over 2.5: {probabilita.get('over25', 50)}%\n"
-        msg += f"   • Gol: {probabilita.get('gol', 50)}%\n\n"
-        
-        # Analisi dettagliata
+        # Forza e forma squadre (senza punteggio numerico)
         if info_analisi:
-            msg += f"📈 **ANALISI**:\n"
-            msg += f"   Forza {casa}: {info_analisi.get('forza_casa', 70)}/100\n"
-            msg += f"   Forza {trasferta}: {info_analisi.get('forza_trasferta', 70)}/100\n"
-            
-            forma_casa = info_analisi.get('forma_casa', '')
-            forma_trasf = info_analisi.get('forma_trasferta', '')
-            if forma_casa:
-                msg += f"   Forma {casa}: {forma_casa}\n"
-            if forma_trasf:
-                msg += f"   Forma {trasferta}: {forma_trasf}\n"
-            
-            # Assenti
-            assenti_casa = info_analisi.get('assenti_casa', [])
-            assenti_trasf = info_analisi.get('assenti_trasferta', [])
-            if assenti_casa:
-                msg += f"   ❌ Assenti {casa}: {', '.join(assenti_casa)}\n"
-            if assenti_trasf:
-                msg += f"   ❌ Assenti {trasferta}: {', '.join(assenti_trasf)}\n"
-            
-            # Scontri diretti
-            ultimi_scontri = info_analisi.get('ultimi_scontri', [])
-            if ultimi_scontri:
-                msg += f"\n⚔️ **ULTIMI SCONTRI**:\n"
-                for scontro in ultimi_scontri[:3]:
-                    data = scontro.get('data', 'N/A')
-                    ris = scontro.get('risultato', '?-?')
-                    vinc = scontro.get('vincitore', 'pareggio')
-                    msg += f"   {data}: {ris} (V: {vinc})\n"
-            
-            msg += "\n"
+            msg += f"🔹 {casa}: {get_team_form(casa)}\n"
+            msg += f"🔹 {trasferta}: {get_team_form(trasferta)}\n\n"
         
-        # Descrizione
-        descrizione = pronostico.get("descrizione", "")
-        if descrizione:
-            msg += f"📝 **ANALISI AI**:\n{descrizione}\n\n"
-        
-        # Scommesse consigliate
+        # Scommesse consigliate (top 3, senza quote)
         if scommesse:
-            msg += f"{'='*45}\n💰 **SCOMMESSE CONSIGLIATE**:\n\n"
-            for i, sc in enumerate(scommesse[:MOSTRA_TOP_SCOMMESSE], 1):
+            msg += "💰 Scommesse Consigliate:\n"
+            for sc in scommesse[:3]:
                 tipo = sc.get("tipo", "?")
-                quota = sc.get("quota", "1.80")
                 desc = sc.get("descrizione", "")
-                msg += f"{i}. `{tipo}` @ {quota}\n"
-                if desc:
-                    msg += f"   _{desc}_\n"
-            msg += "\n"
+                msg += f"   • `{tipo}` - {desc}\n"
         
-        msg += f"⚠️ _Le previsioni sono generate da AI e non garantiscono risultati._"
+        # Nota disclaimer breve
+        msg += "\n⚠️ Previsioni AI - Gioca responsabilmente"
         
         return msg
 

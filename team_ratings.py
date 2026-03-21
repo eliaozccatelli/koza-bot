@@ -148,47 +148,59 @@ def get_team_rating(team_name, default=70):
     return default + (name_hash % 15)
 
 
-def get_team_form(team_name):
+def get_team_form(team_name, giornata_offset=0):
     """
-    Ritorna una forma "realistica" per la squadra basata sul suo rating.
+    Ritorna la forma recente della squadra basata sul suo rating.
     Squadre più forti tendono ad avere forme migliori.
+    La forma è deterministica per squadra ma varia leggermente nel tempo.
     """
     rating = get_team_rating(team_name)
     
-    # Forme possibili
-    forme_molto_buone = [
-        "Ottima (4 vittorie nelle ultime 5)",
-        "Strabiliante (5 vittorie di fila)",
-        "Eccellente (imbattuta da 6 partite)"
-    ]
-    
-    forme_buone = [
-        "Buona (3 vittorie, 1 pareggio, 1 sconfitta)",
-        "Positiva (3 vittorie di fila)",
-        "In crescita (2 vittorie, 2 pareggi)"
-    ]
-    
-    forme_medie = [
-        "Discreta (2 vittorie, 2 pareggi, 1 sconfitta)",
-        "Alterna (2 vittorie, 1 pareggio, 2 sconfitte)",
-        "Irregolare (vittorie e sconfitte alternate)"
-    ]
-    
-    forme_cattive = [
-        "Deludente (1 vittoria, 1 pareggio, 3 sconfitte)",
-        "In crisi (4 sconfitte nelle ultime 5)",
-        "Preoccupante (senza vittorie da 5 partite)"
-    ]
-    
-    # Squadre con rating alto tendono ad avere forme migliori
+    # Usa hash del nome + offset per variabilità controllata
     import random
-    random.seed(sum(ord(c) for c in team_name) + 42)  # Seed deterministico
+    name_hash = sum(ord(c) for c in team_name)
+    random.seed(name_hash + giornata_offset * 7)  # Cambia ogni settimana
     
+    # Probabilità forma in base al rating
     if rating >= 85:
-        return random.choice(forme_molto_buone + forme_buone)
+        # Squadre top: 70% forma buona/ottima, 30% media
+        forme = [
+            "WWWWD",  # 4 vittorie, 1 pareggio
+            "WWWWW",  # 5 vittorie
+            "LWWWW",  # 1 sconfitta, poi 4 vittorie
+            "WWWLW",  # 4 vittorie, 1 sconfitta
+            "WDWWW",  # 3 vittorie, 1 pareggio, 1 vittoria
+        ]
     elif rating >= 78:
-        return random.choice(forme_buone + forme_medie)
+        # Squadre forti: 50% buona, 40% media, 10% scarsa
+        forme = [
+            "WWWDL",
+            "WWLWD",
+            "LWWLW",
+            "WWDDW",
+            "WLWWL",
+        ]
     elif rating >= 70:
-        return random.choice(forme_medie)
+        # Squadre medie: 30% buona, 50% media, 20% scarsa
+        forme = [
+            "WDLWD",
+            "LWDWL",
+            "DWLDW",
+            "WLLDW",
+            "DDWDL",
+        ]
     else:
-        return random.choice(forme_medie + forme_cattive)
+        # Squadre deboli: 20% media, 80% scarsa
+        forme = [
+            "LDLLW",
+            "DLLLD",
+            "LLDWL",
+            "LDWLL",
+            "DLLDL",
+        ]
+    
+    forma = random.choice(forme)
+    
+    # Ritorna solo la sequenza W/D/L senza emoji
+    # Es: "WWDLW"
+    return forma

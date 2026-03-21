@@ -9,6 +9,8 @@ import logging
 import requests
 from datetime import datetime, timedelta
 
+from team_ratings import get_team_rating, get_team_form
+
 logger = logging.getLogger(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -299,58 +301,119 @@ Rispondi SOLO con il JSON valido, nessun testo aggiuntivo."""
     def _default_analysis(self, casa, trasferta):
         """
         Ritorna un'analisi di default se Gemini fallisce.
-        Genera statistiche variabili basate sui nomi delle squadre.
+        Usa rating realistici delle squadre da database statico.
         """
-        # Genera valori pseudo-casuali ma deterministici basati sui nomi squadre
-        casa_hash = sum(ord(c) for c in casa)
-        trasf_hash = sum(ord(c) for c in trasferta)
+        # Usa rating reali delle squadre (0-100)
+        forza_casa = get_team_rating(casa)
+        forza_trasf = get_team_rating(trasferta)
         
-        # Forza squadre (60-90)
-        forza_casa = 60 + (casa_hash % 31)
-        forza_trasf = 60 + (trasf_hash % 31)
+        # Aggiungi piccola variazione casuale giornaliera (±5 punti)
+        import random
+        from datetime import date
+        random.seed(date.today().toordinal())  # Seed basato sulla data
+        forza_casa += random.randint(-5, 5)
+        forza_trasf += random.randint(-5, 5)
         
-        # Probabilità basate sulla forza
-        prob_1 = min(70, max(20, forza_casa - forza_trasf + 50 + (casa_hash % 11) - 5))
-        prob_2 = min(70, max(20, forza_trasf - forza_casa + 50 + (trasf_hash % 11) - 5))
+        # Probabilità basate sulla forza relativa
+        diff = forza_casa - forza_trasf
+        prob_1 = min(75, max(25, 50 + diff * 0.8 + random.randint(-3, 3)))
+        prob_2 = min(75, max(25, 50 - diff * 0.8 + random.randint(-3, 3)))
         prob_x = 100 - prob_1 - prob_2
         
-        # Normalizza
+        # Normalizza se necessario
         if prob_x < 10:
-            prob_1 = prob_1 - 5
-            prob_2 = prob_2 - 5
+            prob_1 = max(25, prob_1 - 5)
+            prob_2 = max(25, prob_2 - 5)
             prob_x = 100 - prob_1 - prob_2
         
-        # Risultato pronosticato
+        # Risultato pronosticato basato sulle probabilità
         if prob_1 > prob_2 and prob_1 > prob_x:
-            risultato = f"{1 + (casa_hash % 3)}-{casa_hash % 2}"
+            gol_casa = 1 + (forza_casa // 30) + random.randint(0, 1)
+            gol_trasf = random.randint(0, forza_trasf // 40)
+            risultato = f"{gol_casa}-{gol_trasf}"
             vincitore = "casa"
             consiglio = "1"
             desc_cons = f"Vittoria {casa} favorita"
         elif prob_2 > prob_1 and prob_2 > prob_x:
-            risultato = f"{trasf_hash % 2}-{1 + (trasf_hash % 3)}"
+            gol_casa = random.randint(0, forza_casa // 40)
+            gol_trasf = 1 + (forza_trasf // 30) + random.randint(0, 1)
+            risultato = f"{gol_casa}-{gol_trasf}"
             vincitore = "trasferta"
             consiglio = "2"
             desc_cons = f"Vittoria {trasferta} possibile"
         else:
-            risultato = f"{1 + (casa_hash % 2)}-{1 + (trasf_hash % 2)}"
+            gol_casa = 1 + (forza_casa // 35)
+            gol_trasf = 1 + (forza_trasf // 35)
+            risultato = f"{gol_casa}-{gol_trasf}"
             vincitore = "pareggio"
             consiglio = "X"
             desc_cons = "Pareggio probabile"
         
-        # Forme diverse
-        forme = [
-            "Ottima (4 vittorie nelle ultime 5)",
-            "Buona (3 vittorie, 1 pareggio, 1 sconfitta)",
-            "Discreta (2 vittorie, 2 pareggi, 1 sconfitta)",
-            "Irregolare (2 vittorie, 1 pareggio, 2 sconfitte)",
-            "In calo (1 vittoria, 1 pareggio, 3 sconfitte)"
-        ]
-        forma_casa = forme[casa_hash % len(forme)]
-        forma_trasf = forme[trasf_hash % len(forme)]
+        # Forma realistica basata sul rating
+        forma_casa = get_team_form(casa)
+        forma_trasf = get_team_form(trasferta)
         
-        # Over/Under basato sulla forza offensiva
-        over25 = min(80, max(30, (forza_casa + forza_trasf) // 2 + (casa_hash % 21) - 10))
-        gol = min(75, max(35, over25 - 10 + (trasf_hash % 21) - 10))
+        # Over/Under basato sulla forza offensiva complessiva
+        media_forza = (forza_casa + forza_trasf) / 2
+        over25 = min(80, max(30, int(media_forza * 0.6) + random.randint(-5, 5)))
+        gol = min(75, max(35, over25 - 10 + random.randint(-5, 5)))
+        
+        # Confidence basata sulla differenza di forza
+        confidence = min(90, max(45, 50 + abs(diff) // 2))
+        
+        # Quote variabili basate sulle probabilità
+        quota_1 = f"{1.2 + (100/prob_1):.2f}" if prob_1 > 0 else "3.50"
+        quota_x = f"{1.2 + (100/prob_x):.2f}" if prob_x > 0 else "3.20"
+        quota_2 = f"{1.2 + (100/prob_2):.2f}" if prob_2 > 0 else "3.50"
+        
+        # Genera scommesse consigliate variabili basate sulle probabilità
+        scommesse = []
+        
+        # 1. Esito principale (1/X/2) o doppia chance
+        if prob_1 > 55:
+            scommesse.append({"tipo": "1", "descrizione": "Vittoria casa netta"})
+        elif prob_2 > 55:
+            scommesse.append({"tipo": "2", "descrizione": "Vittoria trasferta netta"})
+        elif prob_x > 35:
+            scommesse.append({"tipo": "X", "descrizione": "Pareggio probabile"})
+        elif prob_1 + prob_x > 65:
+            scommesse.append({"tipo": "1X", "descrizione": "Casa non perde"})
+        elif prob_2 + prob_x > 65:
+            scommesse.append({"tipo": "X2", "descrizione": "Trasferta non perde"})
+        else:
+            scommesse.append({"tipo": "12", "descrizione": "Non pareggia"})
+        
+        # 2. Gol / No Gol con variante multigol
+        if gol > 60:
+            scommesse.append({"tipo": "Gol", "descrizione": "Entrambe segnano"})
+            # Multigol basato sulla forza offensiva
+            if media_forza > 75:
+                scommesse.append({"tipo": "Multigol 2-4", "descrizione": "Totale gol 2-4"})
+            else:
+                scommesse.append({"tipo": "Multigol 1-3", "descrizione": "Totale gol 1-3"})
+        elif gol < 40:
+            scommesse.append({"tipo": "No Gol", "descrizione": "Almeno una non segna"})
+            scommesse.append({"tipo": "Multigol 0-2", "descrizione": "Pochi gol previsti"})
+        else:
+            # Caso incerto
+            scommesse.append({"tipo": "Gol", "descrizione": "Rischio Gol"})
+            scommesse.append({"tipo": "Under 3.5", "descrizione": "Massimo 3 gol"})
+        
+        # 3. Over/Under con varianti
+        if over25 > 60:
+            scommesse.append({"tipo": "Over 2.5", "descrizione": "Più di 2 gol"})
+            if over25 > 70:
+                scommesse.append({"tipo": "Over 3.5", "descrizione": "Partita aperta"})
+        elif over25 < 40:
+            scommesse.append({"tipo": "Under 2.5", "descrizione": "Meno di 2 gol"})
+            if media_forza < 65:
+                scommesse.append({"tipo": "Under 1.5", "descrizione": "Partita chiusa"})
+        
+        # 4. Gol squadra specifici
+        if forza_casa > forza_trasf + 10:
+            scommesse.append({"tipo": f"Gol {casa}", "descrizione": f"{casa} segna"})
+        elif forza_trasf > forza_casa + 10:
+            scommesse.append({"tipo": f"Gol {trasferta}", "descrizione": f"{trasferta} segna"})
         
         return {
             "pronostico": {
@@ -358,8 +421,8 @@ Rispondi SOLO con il JSON valido, nessun testo aggiuntivo."""
                 "vincitore": vincitore,
                 "over_under": "Over 2.5" if over25 > 50 else "Under 2.5",
                 "gol_nogol": "Gol" if gol > 50 else "No Gol",
-                "confidence": min(90, max(40, abs(forza_casa - forza_trasf) + 40)),
-                "descrizione": f"Analisi {casa} vs {trasferta}: {casa} ({forma_casa.lower()}), {trasferta} ({forma_trasferta.lower()}). {desc_cons.lower()}."
+                "confidence": confidence,
+                "descrizione": f"Analisi {casa} vs {trasferta}: {casa} (forza: {forza_casa}/100), {trasferta} (forza: {forza_trasf}/100). {desc_cons}."
             },
             "probabilita": {
                 "1": prob_1,
@@ -368,7 +431,7 @@ Rispondi SOLO con il JSON valido, nessun testo aggiuntivo."""
                 "over25": over25,
                 "over35": max(20, over25 - 20),
                 "gol": gol,
-                "cartellini_over45": 40 + ((casa_hash + trasf_hash) % 31)
+                "cartellini_over45": 40 + random.randint(0, 20)
             },
             "analisi": {
                 "forza_casa": forza_casa,
@@ -379,11 +442,7 @@ Rispondi SOLO con il JSON valido, nessun testo aggiuntivo."""
                 "assenti_trasferta": [],
                 "ultimi_scontri": []
             },
-            "scommesse_consigliate": [
-                {"tipo": consiglio, "quota": f"{1.5 + (casa_hash % 30)/10:.2f}", "descrizione": desc_cons},
-                {"tipo": "Gol" if gol > 50 else "No Gol", "quota": f"{1.7 + (trasf_hash % 25)/10:.2f}", "descrizione": "Entrambe le squadre segnano" if gol > 50 else "Almeno una non segna"},
-                {"tipo": "Over 2.5" if over25 > 50 else "Under 2.5", "quota": f"{1.8 + (casa_hash % 20)/10:.2f}", "descrizione": "Più di 2 gol" if over25 > 50 else "Meno di 2 gol"}
-            ]
+            "scommesse_consigliate": scommesse[:4]  # Max 4 scommesse
         }
     
     def get_info_squadra(self, nome_squadra):

@@ -96,6 +96,24 @@ class SportsDBEngine:
                 "stadio": event.get("strVenue"),
                 "round": event.get("intRound")
             })
+        
+        # Se mancano competizioni principali, aggiungi dal fallback
+        fallback_data = self._get_fallback_partite(data)
+        fallback_comps = {comp["nome"]: comp for comp in fallback_data.get("competizioni", [])}
+        
+        # Lista competizioni principali da mostrare sempre
+        leghe_principali = [
+            "Italian Serie A",
+            "English Premier League", 
+            "Spanish La Liga",
+            "German Bundesliga",
+            "French Ligue 1"
+        ]
+        
+        for lega_nome in leghe_principali:
+            if lega_nome not in competizioni and lega_nome in fallback_comps:
+                competizioni[lega_nome] = fallback_comps[lega_nome]
+                logger.info(f"Aggiunta fallback: {lega_nome}")
 
         return {"competizioni": list(competizioni.values())}
 
@@ -206,6 +224,30 @@ class SportsDBEngine:
                     "partite": [
                         {"id": "EN1_1", "casa": "Manchester City", "trasferta": "Liverpool", "stadio": "Etihad"},
                         {"id": "EN1_2", "casa": "Arsenal", "trasferta": "Chelsea", "stadio": "Emirates"}
+                    ]
+                },
+                {
+                    "id": "4335",
+                    "nome": f"La Liga - {giorno}",
+                    "partite": [
+                        {"id": "ES1_1", "casa": "Real Madrid", "trasferta": "Barcelona", "stadio": "Santiago Bernabeu"},
+                        {"id": "ES1_2", "casa": "Atletico Madrid", "trasferta": "Sevilla", "stadio": "Wanda Metropolitano"}
+                    ]
+                },
+                {
+                    "id": "4331",
+                    "nome": f"Bundesliga - {giorno}",
+                    "partite": [
+                        {"id": "DE1_1", "casa": "Bayern Monaco", "trasferta": "Borussia Dortmund", "stadio": "Allianz Arena"},
+                        {"id": "DE1_2", "casa": "Bayer Leverkusen", "trasferta": "RB Leipzig", "stadio": "BayArena"}
+                    ]
+                },
+                {
+                    "id": "4334",
+                    "nome": f"Ligue 1 - {giorno}",
+                    "partite": [
+                        {"id": "FR1_1", "casa": "Paris Saint-Germain", "trasferta": "Monaco", "stadio": "Parc des Princes"},
+                        {"id": "FR1_2", "casa": "Lille", "trasferta": "Marseille", "stadio": "Stade Pierre-Mauroy"}
                     ]
                 }
             ]
