@@ -100,3 +100,19 @@ import logging
 LOG_LEVEL = logging.INFO
 # Cambia in logging.DEBUG per più dettagli
 # Cambia in logging.WARNING per meno dettagli
+
+
+# ════════════════════════════════════════════════════════════════
+# 🏆 Leghe Principali (whitelist per filtrare partite)
+# ════════════════════════════════════════════════════════════════
+
+LEGHE_PRINCIPALI = {
+    "4332": "Serie A",           # Serie A
+    "4328": "Premier League",    # Premier League
+    "4335": "La Liga",           # La Liga
+    "4331": "Bundesliga",        # Bundesliga
+    "4334": "Ligue 1",           # Ligue 1
+    "4480": "Champions League",  # Champions League
+    "4481": "Europa League",     # Europa League
+    "5007": "Conference League", # Conference League
+}

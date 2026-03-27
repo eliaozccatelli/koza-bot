@@ -61,7 +61,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /start - mostra selezione data"""
     messaggio = (
         "⚽ **KOZA Bot 3.0** 🤖\n\n"
-        "Seleziona una data per vedere le partite disponibili:"
+        "Seleziona una data per vedere le partite disponibili:\n\n"
+        "🤖 *Powered by Google Gemini AI*"
     )
     
     try:
