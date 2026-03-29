@@ -1,213 +1,543 @@
-# ⚽ KOZA Bot 3.0 - Telegram Football Predictor
+# ⚽ KOZA Bot 3.0 - Football Analysis Bot
 
-Bot Telegram intelligente per l'analisi e le previsioni delle partite di calcio, integrato con **Google Gemini AI** per analisi avanzate e **TheSportsDB API** per dati reali delle partite.
+Bot Telegram avanzato per l'analisi delle partite di calcio, integrato con **Google Gemini AI** per analisi predittive e multiple fonti dati per informazioni accurate.
 
-## 🎯 Cos'è KOZA Bot
+## 📋 Indice
 
-KOZA Bot è un assistente personale per gli appassionati di calcio che fornisce:
-- **Analisi AI** delle partite con Google Gemini
-- **Dati reali** di partite, squadre e competizioni
-- **Pronostici intelligenti** basati su statistica e machine learning
-- **Interfaccia conversazionale** via Telegram con pulsanti inline
+1. [Panoramica](#panoramica)
+2. [Architettura](#architettura)
+3. [Funzionalità Dettagliate](#funzionalità-dettagliate)
+4. [Flusso Utente](#flusso-utente)
+5. [Struttura Progetto](#struttura-progetto)
+6. [Sistemi di Fallback](#sistemi-di-fallback)
+7. [Configurazione](#configurazione)
+8. [Installazione](#installazione)
+9. [Utilizzo](#utilizzo)
+10. [API Integrate](#api-integrate)
 
-## 🏗️ Architettura e Come Funziona
+## Panoramica
 
-### Flusso di Funzionamento
+KOZA Bot è un assistente calcistico su Telegram che combina:
+- 🤖 **AI Generativa** (Google Gemini 2.0 Flash) per analisi predittive
+- 📊 **Dati Reali** da TheSportsDB API
+- 🔧 **Sistema di Fallback** JSON per partite non coperte dalle API
+- 💬 **Interfaccia Inline** con pulsanti intuitivi
+
+### Perché KOZA Bot?
+
+| Problema | Soluzione KOZA |
+|----------|---------------|
+| API gratuite limitate | Sistema multi-fonte con fallback automatico |
+| Dati incompleti | JSON locale per qualificazioni, Nations League, etc. |
+| Analisi superficiali | AI Gemini con contesto calcistico avanzato |
+| UX complessa | Pulsanti inline: 3 click per l'analisi |
+
+## Architettura
+
+### Diagramma del Flusso
 
 ```
-Utente Telegram → Bot Telegram → Logica KOZA → Engine AI/API → Risposta formattata
+Utente Telegram
+    ↓
+┌─────────────────────────────────────┐
+│         bot_tg.py                   │
+│  Interfaccia + Callback Handlers    │
+└──────────┬──────────────────────────┘
+           ↓
+┌─────────────────────────────────────┐
+│       logica_koza.py                │
+│  Orchestrazione + Business Logic    │
+└──────────┬──────────────────────────┘
+           ↓
+    ┌──────┴──────┬─────────────┐
+    ↓             ↓             ↓
+┌────────┐  ┌──────────┐  ┌────────────┐
+│SportsDB│  │ Gemini   │  │ JSON       │
+│ Engine │  │ Engine   │  │ Fallback   │
+└────────┘  └──────────┘  └────────────┘
+    ↓             ↓             ↓
+Partite reali Analisi AI   Partite statiche
+(top 5 + CL)  + Stats      (qualificazioni)
 ```
 
-1. **Utente seleziona data** → Bot mostra competizioni disponibili
-2. **Utente seleziona competizione** → Bot mostra partite del giorno
-3. **Utente clicca partita** → Sistema analizza con Gemini AI
-4. **Risultato formattato** → Messaggio Telegram con pronostico e scommesse
+### Gerarchia delle Fonti Dati
 
-### Componenti Principali
+Quando cerchi partite per una data, il bot cerca in ordine:
 
-| File | Funzione |
-|------|----------|
-| `bot_tg.py` | Interfaccia Telegram, gestione bot e pulsanti inline |
-| `logica_koza.py` | Motore principale, orchestrazione tra AI e dati |
-| `gemini_engine.py` | Integrazione Google Gemini AI per analisi |
-| `sportsdb_engine.py` | Connessione TheSportsDB API per dati reali |
-| `team_ratings.py` | Database rating squadre e forma algoritmica |
-| `config.py` | Configurazioni globali e API keys |
+1. **TheSportsDB API** (gratuita)
+   - ✅ Top 5 campionati europei
+   - ✅ Champions League, Europa League, Conference League
+   - ✅ Partite aggiornate giornalmente
+   - ❌ Non copre: qualificazioni mondiali, Nations League (alcune)
 
-### Tecnologie Utilizzate
+2. **API-Football** (piano gratuito limitato)
+   - ✅ Copre TUTTO (top 5 + qualificazioni + mondiali)
+   - ❌ Limite: solo +3 giorni dalla data corrente
+   - ✅ Usata per statistiche live durante le partite
 
-- **Python 3.8+** - Linguaggio principale
-- **Google Gemini AI** - Analisi testuale e generazione previsioni
-- **TheSportsDB API** - Dati reali partite, squadre, competizioni
-- **python-telegram-bot** - Framework bot Telegram
-- **Fuzzy Matching** - Riconoscimento nomi squadre approssimativo
-- **JSON** - Formato dati per risposte AI
+3. **JSON Fallback** (`partite_2026.json`)
+   - ✅ Nessun limite di data
+   - ✅ Qualificazioni mondiali, Nations League, Asian Cup
+   - ✅ Modificabile manualmente per aggiungere partite future
+   - ✅ Priorità quando le API non trovano nulla
 
-## ✨ Caratteristiche Principali
+4. **Fallback Statico** (ultima risorsa)
+   - Partite fittizie di esempio (Inter-Milan, etc.)
 
-### 🤖 Analisi AI con Gemini
-- Analisi contestuale delle partite
-- Generazione probabilità 1X2, Over/Under, Gol
-- Scommesse consigliate personalizzate
-- Fallback automatico se API non disponibile
+## Funzionalità Dettagliate
 
-### 📊 Dati Reali TheSportsDB
-- Partite aggiornate giornalmente
-- Competizioni principali (Serie A, Premier League, La Liga, Bundesliga, Ligue 1)
-- Informazioni squadre e stadi
-- Fallback statico se API fallisce
+### 1. Sistema di Navigazione a 3 Livelli
 
-### 🎯 Pronostici Intelligenti
-- **Probabilità calcolate**: 1 (casa), X (pareggio), 2 (trasferta)
-- **Over/Under**: 2.5, 3.5 gol
-- **Gol/No Gol**: entrambe le squadre segnano
-- **Doppie chance**: 1X, X2, 12
-- **Multigol**: range gol totali
+```
+Livello 1: SELEZIONE DATA
+├─ 📅 Oggi (29/03) - Sabato
+├─ 📅 Domani (30/03) - Domenica
+└─ 📅 Dopodomani (31/03) - Lunedì
+         ↓
+Livello 2: SELEZIONE COMPETIZIONE
+├─ 🏆 Serie A (3 partite)
+├─ 🏆 Premier League (5 partite)
+├─ 🏆 UEFA Nations League (2 partite)
+└─ 🏆 AFC Asian Cup (3 partite)
+         ↓
+Livello 3: SELEZIONE PARTITA
+├─ ⚽ Inter vs Milan
+├─ ⚽ Juventus vs Napoli
+└─ ⚽ Latvia vs Gibraltar
+         ↓
+    ANALISI AI
+```
 
-### 💬 Interfaccia Utente
-- **Inline buttons**: selezione intuitiva data → competizione → partita
-- **Formattazione pulita**: output compatto e leggibile
-- **Forma squadre**: sequenze W/D/L algoritmiche
-- **Nessun Markdown pesante**: messaggi leggibili su mobile
+### 2. Analisi AI con Google Gemini
 
-### 🔧 Sistema di Fallback
-- Se Gemini API fallisce → analisi statica basata su rating squadre
-- Se TheSportsDB fallisce → partite statiche predefinite
-- Forma squadre algoritmica basata su rating (W/D/L)
+Quando clicchi una partita, Gemini analizza e genera:
 
-## 📁 Struttura del Progetto
+**JSON Output:**
+```json
+{
+  "pronostico": {
+    "risultato_esatto": "2-1",
+    "vincitore": "casa",
+    "confidence": 75
+  },
+  "probabilita": {
+    "1": 55, "X": 25, "2": 20,
+    "over25": 65, "gol": 70
+  },
+  "analisi": {
+    "forma_casa": "WWDLW",
+    "forma_trasferta": "LWDLW",
+    "assenti_casa": ["Giocatore X"],
+    "ultimi_scontri": [...]
+  },
+  "scommesse_consigliate": [
+    {"tipo": "1", "descrizione": "Vittoria casa"},
+    {"tipo": "Over 2.5", "descrizione": "Più di 2 gol"}
+  ]
+}
+```
+
+**Messaggio Telegram Formattato:**
+```
+🤖 **ANALISI KOZA - Powered by Gemini AI**
+=============================================
+
+🏟 **LATVIA** vs **GIBRALTAR**
+
+🎯 **PRONOSTICO**: `4-0` 
+💡 **Confidence**: 55%
+🏆 **Favorito**: casa
+
+📊 **PROBABILITA'**:
+   • 1 (Casa): 52.8%
+   • X (Pareggio): 13.0%
+   • 2 (Trasferta): 34.2%
+   • Over 2.5: 46%
+   • Gol: 37%
+
+📈 **FORMA**:
+   Latvia: WWDLW
+   Gibraltar: LWDLW
+
+   ❌ Assenti Latvia: Giocatore X
+
+⚔️ **ULTIMI SCONTRI**:
+   15/09/2024: 2-1 (V: casa)
+
+=============================================
+💰 **SCOMMESSE CONSIGLIATE**:
+
+1. `1`
+   Vittoria Latvia netta
+2. `Over 2.5`
+   Più di 2 gol attesi
+
+⚠️ _Le previsioni sono generate da AI e non garantiscono risultati._
+```
+
+### 3. Persistenza Messaggi
+
+A differenza di molti bot, KOZA **non cancella** i messaggi:
+
+- **Analisi rimane in chat** → Storico consultabile
+- **Nuovo messaggio per il menu** → Puoi accumulare analisi multiple
+- **Pulsante "Torna indietro"** → Invia nuovo messaggio col menu date
+
+**Vantaggio:** Puoi confrontare analisi diverse senza perdere lo storico.
+
+### 4. Fuzzy Matching Squadre
+
+Se scrivi i nomi delle squadre manualmente:
+- "Inter" → ✓ Inter
+- "Milan" → ✓ Milan
+- "inter milan" → ✓ Inter vs Milan
+- "inter-milan" → ✓ Inter vs Milan
+- "int mil" → ✓ Inter vs Milan (con similarità 85%+)
+
+Algoritmo: `rapidfuzz` con soglia 82% di similarità.
+
+### 5. Modalità Manuale
+
+Oltre ai pulsanti, puoi scrivere direttamente:
+```
+/predici Inter Milan
+/predici Juventus Napoli
+/predici Real Madrid vs Barcelona
+```
+
+## Flusso Utente
+
+### Scenario 1: Partita dal Menu
+
+```
+1. Utente: /start
+   Bot: [Pulsanti: Oggi, Domani, Dopodomani]
+
+2. Utente: Clicca "Dopodomani (31/03)"
+   Bot: [Pulsanti: Serie A, Nations League, Asian Cup...]
+
+3. Utente: Clicca "UEFA Nations League"
+   Bot: [Pulsanti: Latvia vs Gibraltar, Luxembourg vs Malta]
+
+4. Utente: Clicca "Latvia vs Gibraltar"
+   Bot: [Messaggio analisi AI completa + pulsante "Torna indietro"]
+
+5. Utente: Clicca "🔙 Torna indietro"
+   Bot: [Nuovo messaggio col menu date]
+   (L'analisi Latvia-Gibraltar rimane in chat sopra)
+```
+
+### Scenario 2: Partita Manuale
+
+```
+Utente: Inter vs Milan
+Bot: [Analisi AI diretta]
+```
+
+## Struttura Progetto
 
 ```
 KOZA/
-├── bot_tg.py              # Entry point bot Telegram
-├── logica_koza.py         # Business logic e orchestrazione
-├── gemini_engine.py       # Wrapper Google Gemini API
-├── sportsdb_engine.py     # Wrapper TheSportsDB API
-├── team_ratings.py        # Database rating statico squadre
-├── config.py              # Configurazioni e environment
-├── requirements.txt       # Dipendenze Python
-├── .env                   # Variabili d'ambiente (non committare)
-└── README.md              # Questo file
+│
+├── 📁 FILE PRINCIPALI
+│   ├── bot_tg.py              # Entry point, interfaccia Telegram
+│   ├── logica_koza.py         # Business logic, orchestrazione
+│   └── config.py              # Configurazioni e whitelist
+│
+├── 📁 MOTORI DATI
+│   ├── sportsdb_engine.py     # TheSportsDB API wrapper
+│   ├── apifootball_engine.py  # API-Football wrapper
+│   ├── gemini_engine.py       # Google Gemini AI wrapper
+│   └── rapidapi_engine.py     # RapidAPI (stats avanzate)
+│
+├── 📁 DATI E FALLBACK
+│   ├── teams_fallback.py      # Database statico squadre
+│   ├── team_ratings.py        # Rating algoritmici squadre
+│   ├── team_form_bridge.py    # Bridge forma reale vs statica
+│   └── partite_2026.json      # Fallback JSON partite future
+│
+├── 📁 ML (Machine Learning)
+│   ├── ml_integration.py      # Integrazione ML nel flusso
+│   ├── ml_predictor.py        # Modelli ML per predizioni
+│   ├── train_model.py         # Training modelli
+│   └── train_with_live.py     # Training con dati live
+│
+├── 📁 TEST E DEBUG
+│   ├── test_whitelist.py      # Test whitelist competizioni
+│   ├── test_wc_qualifiers.py  # Test qualificazioni mondiali
+│   ├── test_gemini.py         # Test connessione Gemini
+│   └── debug_league_id.py     # Debug ID leghe
+│
+├── 📁 DOCUMENTAZIONE
+│   ├── README.md              # Questo file
+│   ├── ANALISI_PROGETTO.md    # Analisi tecnica dettagliata
+│   ├── QUICKSTART.md          # Guida rapida 5 minuti
+│   ├── TUTORIAL_ML.md         # Tutorial Machine Learning
+│   └── .env.example           # Template variabili d'ambiente
+│
+└── 📁 CONFIGURAZIONE
+    ├── requirements.txt       # Dipendenze Python
+    ├── requirements-render.txt # Dipendenze per Render
+    ├── render.yaml            # Configurazione Render.com
+    └── .gitignore             # File ignorati da Git
 ```
 
-## 🔧 Come è Implementato
+## Sistemi di Fallback
 
-### 1. Singleton Pattern
-Tutti gli engine (Gemini, SportsDB, KOZA) usano il pattern Singleton per evitare istanze multiple:
+### Fallback a Cascata
+
+```
+Utente cerca partite 31/03/2026
+         ↓
+┌─────────────────────────────────┐
+│ 1. TheSportsDB API              │
+│    ❌ Nessuna partita trovata   │
+└────────┬────────────────────────┘
+         ↓
+┌─────────────────────────────────┐
+│ 2. API-Football                 │
+│    ❌ Limite +3 gg, ritorna 0   │
+└────────┬────────────────────────┘
+         ↓
+┌─────────────────────────────────┐
+│ 3. JSON Fallback                │
+│    ✅ Trovate 5 partite!        │
+│    - Nations League: 2 partite  │
+│    - Asian Cup: 3 partite      │
+└─────────────────────────────────┘
+```
+
+### Come Aggiungere Partite al JSON
+
+Edita `partite_2026.json`:
+
+```json
+{
+  "partite_per_data": {
+    "2026-04-01": {
+      "competizioni": [
+        {
+          "id": "4490",
+          "nome": "UEFA Nations League",
+          "partite": [
+            {
+              "id": "NL_0104_1",
+              "casa": "Squadra A",
+              "trasferta": "Squadra B",
+              "stadio": "Stadio X",
+              "data": "2026-04-01T20:45:00"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+**ID Competizioni Supportati:**
+| ID | Competizione |
+|----|-------------|
+| 4332 | Serie A |
+| 4328 | Premier League |
+| 4335 | La Liga |
+| 4331 | Bundesliga |
+| 4334 | Ligue 1 |
+| 4480 | Champions League |
+| 4481 | Europa League |
+| 5007 | Conference League |
+| 4490 | UEFA Nations League |
+| 4866 | AFC Asian Cup Qualifiers |
+
+## Configurazione
+
+### File .env
+
+Crea `.env` nella root:
+
+```env
+# Google Gemini AI (obbligatorio)
+GEMINI_API_KEY=AIzaSyC...tua_chiave
+
+# Telegram Bot (obbligatorio)
+TELEGRAM_TOKEN=123456789:ABC...tuo_token
+
+# TheSportsDB (opzionale, default: 123)
+THESPORTSDB_API_KEY=123
+
+# API-Football (opzionale, per stats live)
+APIFOOTBALL_API_KEY=tua_chiave_api_football
+```
+
+### Whitelist Competizioni
+
+In `config.py`, modifica `LEGHE_PRINCIPALI`:
+
 ```python
-_engine_instance = None
-def get_engine():
-    global _engine_instance
-    if _engine_instance is None:
-        _engine_instance = Engine()
-    return _engine_instance
+LEGHE_PRINCIPALI = {
+    "4332": "Serie A",
+    "4328": "Premier League",
+    "4335": "La Liga",
+    "4331": "Bundesliga",
+    "4334": "Ligue 1",
+    "4480": "Champions League",
+    "4481": "Europa League",
+    "5007": "Conference League",
+    "4490": "UEFA Nations League",
+    "4866": "AFC Asian Cup Qualifiers",
+}
 ```
 
-### 2. Fuzzy Matching Squadre
-Riconoscimento nomi squadre anche con errori di battitura usando la libreria `thefuzz`.
+## Installazione
 
-### 3. Analisi Gemini
-Prompt engineering per ottenere JSON strutturato con pronostici, probabilità e scommesse.
+### 1. Clona Repository
 
-### 4. Forma Squadre Algoritmica
-Generazione sequenze W/D/L basate su rating:
-- Squadre forti (85+): più W (vittorie)
-- Squadre medie (70-84): mix equilibrato
-- Squadre deboli (<70): più L (sconfitte)
-
-## 📥 Installazione
-
-### 1. Clona la Repository
 ```bash
 git clone https://github.com/tuo-username/koza-bot.git
 cd koza-bot
 ```
 
-### 2. Installa Dipendenze
+### 2. Crea Ambiente Virtuale
+
+```bash
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# macOS/Linux
+source .venv/bin/activate
+```
+
+### 3. Installa Dipendenze
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configura Environment
-Crea file `.env`:
-```env
-GEMINI_API_KEY=AIzaSyC...tua_chiave_gemini
-TELEGRAM_TOKEN=123456789:ABC...tuo_token_bot
-THESPORTSDB_API_KEY=123  # o la tua chiave pro
+### 4. Configura API Keys
+
+```bash
+cp .env.example .env
+# Edita .env con le tue chiavi
 ```
 
-### 4. Ottieni Credenziali
+### 5. Avvia il Bot
 
-**Google Gemini API:**
-1. Vai su [Google AI Studio](https://aistudio.google.com)
-2. Crea API Key gratuita
-3. Copia in `GEMINI_API_KEY`
-
-**Token Telegram Bot:**
-1. Apri Telegram, cerca `@BotFather`
-2. Invia `/newbot`
-3. Segui istruzioni e copia token
-
-**TheSportsDB (opzionale):**
-- Versione free: usa `123` come API key (dati limitati)
-- Versione pro: registrati su [thesportsdb.com](https://thesportsdb.com)
-
-## 🚀 Utilizzo
-
-### Avvia il Bot
 ```bash
 python bot_tg.py
 ```
 
-### Comandi Telegram
+**Output Atteso:**
+```
+🚀 Avvio KOZA Bot 3.0 con Gemini AI...
+🔑 GEMINI_API_KEY caricata: AIzaSyC...
+🔐 TELEGRAM_TOKEN caricato: 123456...
+🤖 Fonte AI: Google Gemini 2.0 Flash
+
+📥 Caricamento database squadre...
+✅ Database caricato!
+📊 Squadre caricate: 96
+🏆 Competizioni: 8
+
+🎯 Bot attivo! Sistema di inline buttons operativo!
+```
+
+## Utilizzo
+
+### Comandi Disponibili
 
 | Comando | Descrizione |
 |---------|-------------|
-| `/start` | Avvia bot, selezione data |
+| `/start` | Avvia bot, mostra selezione date |
 | `/help` | Mostra guida completa |
-| `/about` | Info sul bot |
+| `/about` | Info sul bot e tecnologie |
+| `/predici` | Modalità manuale |
+| `/match` | Alias per /start |
 
-### Flusso Utente
-
-1. **Start** → Mostra bottoni: Oggi, Domani, Dopodomani
-2. **Seleziona data** → Mostra competizioni disponibili
-3. **Seleziona competizione** → Mostra partite del giorno
-4. **Clicca partita** → Ricevi analisi AI completa
-
-### Esempio Output
+### Flusso Standard
 
 ```
-⚽ **Juventus** vs **Milan**
-🎯 Pronostico: `2-1` | Confidenza: 62%
-
-📊 Probabilità:
-   1: 48% | X: 26% | 2: 26%
-   Over 2.5: 54% | Gol: 51%
-
-🔹 Juventus: WWDLW
-🔹 Milan: WLWDW
-
-💰 Scommesse Consigliate:
-   • `1` - Vittoria Juventus
-   • `Over 2.5` - Più di 2 gol
-   • `Gol` - Entrambe segnano
-
-⚠️ Previsioni AI - Gioca responsabilmente
+1. /start
+2. Seleziona data (Oggi/Domani/Dopodomani)
+3. Seleziona competizione
+4. Clicca partita
+5. Leggi analisi AI
+6. Clicca "Torna indietro" per altre partite
 ```
 
-## 🔐 Sicurezza
+### Modalità Manuale
 
-⚠️ **IMPORTANTE**: Non committare mai `.env` su GitHub!
+Scrivi direttamente due squadre:
+```
+Inter Milan
+Juventus Napoli
+Real Madrid vs Barcelona
+```
 
-Il file `.gitignore` è configurato per ignorare automaticamente:
-- `.env`
-- `__pycache__/`
-- File temporanei Python
+## API Integrate
 
-## 📝 Licenza
+### 1. Google Gemini AI
 
-MIT License - Vedi file `LICENSE` per dettagli
+- **Modello:** Gemini 2.0 Flash
+- **Uso:** Analisi partite, generazione pronostici
+- **Costo:** Piano gratuito (60 req/min)
+- **Fallback:** Analisi statica
 
-## 👤 Autore
+### 2. TheSportsDB API
+
+- **Endpoint:** `thesportsdb.com/api/v1/json`
+- **Piano:** Gratuito (API key: "123")
+- **Dati:** Partite, squadre, competizioni
+- **Limitazioni:** Non copre qualificazioni mondiali
+
+### 3. API-Football
+
+- **Piano:** Gratuito (100 req/giorno)
+- **Limite:** Solo +3 giorni dalla data corrente
+- **Uso:** Statistiche live, forma squadre reali
+
+### 4. Telegram Bot API
+
+- **Framework:** python-telegram-bot v21+
+- **Modalità:** Long polling (locale) / Webhook (production)
+
+## Troubleshooting
+
+### Problema: "API_KEY NON TROVATA"
+
+```bash
+ls -la .env
+cat .env
+# Deve essere: GEMINI_API_KEY=AIzaSyC... (senza spazi)
+```
+
+### Problema: Bot non trova partite
+
+1. Verifica data in `partite_2026.json`
+2. Controlla ID competizione in `LEGHE_PRINCIPALI`
+3. Verifica log: `INFO:sportsdb_engine:API-Football: trovate 0 partite`
+
+### Problema: Gemini non risponde
+
+- Rate limit: aspetta 1 minuto
+- Chiave invalida: rigenera da Google AI Studio
+- Fallback automatico attivo
+
+## Roadmap Futura
+
+- [ ] Database SQLite per storico partite
+- [ ] Sistema utenti con abbonamenti (Stripe)
+- [ ] Notifiche push pre-partita
+- [ ] ML model training
+- [ ] Multi-language support
+- [ ] Dashboard web admin
+- [ ] API pubblica
+
+## Licenza
+
+MIT License
+
+## Autore
 
 **Team KOZA** - Marzo 2026

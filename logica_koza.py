@@ -10,12 +10,14 @@ from rapidfuzz import process, utils
 from config import (
     GEMINI_API_KEY,
     THESPORTSDB_API_KEY,
+    APIFOOTBALL_API_KEY,
     FUZZY_MATCH_THRESHOLD,
     LOG_LEVEL,
     MOSTRA_TOP_SCOMMESSE,
 )
 from gemini_engine import GeminiEngine, get_gemini_engine
 from sportsdb_engine import SportsDBEngine, get_sportsdb_engine
+from apifootball_engine import APIFootballEngine, get_apifootball_engine
 from teams_fallback import SQUADRE_FALLBACK, COMPETIZIONI_FALLBACK
 
 logging.basicConfig(level=LOG_LEVEL)
@@ -26,9 +28,10 @@ class KozaEngine:
     """Motore KOZA ibrido: TheSportsDB per dati reali, Gemini per analisi AI."""
 
     def __init__(self):
-        # Inizializza entrambi i motori
+        # Inizializza tutti i motori
         self.gemini = get_gemini_engine(api_keys=GEMINI_API_KEY)
         self.sportsdb = get_sportsdb_engine(api_key=THESPORTSDB_API_KEY)
+        self.apifootball = get_apifootball_engine(api_key=APIFOOTBALL_API_KEY)
         
         # Cache squadre per fuzzy matching
         self.teams_cache = {}
@@ -93,11 +96,21 @@ class KozaEngine:
     # =========================
 
     def get_competizioni_con_partite(self, data=None):
-        """Ritorna competizioni con partite disponibili usando TheSportsDB."""
+        """Ritorna competizioni con partite disponibili usando TheSportsDB, fallback su API-Football."""
         logger.info(f"=== RICERCA COMPETIZIONI === Data: {data}")
         
+        # Prova prima con TheSportsDB
         partite_data = self.sportsdb.get_partite_del_giorno(data)
         competizioni = partite_data.get("competizioni", [])
+        
+        # Se TheSportsDB non trova partite, prova con API-Football
+        if not competizioni:
+            logger.info("TheSportsDB: nessuna partita trovata, provo fallback su API-Football")
+            partite_data = self.apifootball.get_partite_del_giorno(data)
+            competizioni = partite_data.get("competizioni", [])
+            source = "API-Football"
+        else:
+            source = "TheSportsDB"
         
         result = []
         for comp in competizioni:
@@ -106,9 +119,9 @@ class KozaEngine:
             if comp_id:
                 self.competitions[comp_id] = comp_name
                 result.append((comp_id, comp_name))
-                logger.info(f"✓ {comp_name}: {len(comp.get('partite', []))} partite")
+                logger.info(f"✓ [{source}] {comp_name}: {len(comp.get('partite', []))} partite")
         
-        logger.info(f"Totale competizioni con partite: {len(result)}")
+        logger.info(f"Totale competizioni con partite: {len(result)} (source: {source})")
         return result
 
     def get_partite_campionato(self, comp_id, data=None):
@@ -175,22 +188,23 @@ class KozaEngine:
         msg += f"   • Over 2.5: {probabilita.get('over25', 50)}%\n"
         msg += f"   • Gol: {probabilita.get('gol', 50)}%\n\n"
         
-        # Analisi dettagliata
+        # Analisi dettagliata (senza forza ratings)
         if info_analisi:
-            msg += f"📈 **ANALISI**:\n"
-            msg += f"   Forza {casa}: {info_analisi.get('forza_casa', 70)}/100\n"
-            msg += f"   Forza {trasferta}: {info_analisi.get('forza_trasferta', 70)}/100\n"
-            
+            # Forma
             forma_casa = info_analisi.get('forma_casa', '')
             forma_trasf = info_analisi.get('forma_trasferta', '')
-            if forma_casa:
-                msg += f"   Forma {casa}: {forma_casa}\n"
-            if forma_trasf:
-                msg += f"   Forma {trasferta}: {forma_trasf}\n"
+            if forma_casa or forma_trasf:
+                msg += f"📈 **FORMA**:\n"
+                if forma_casa:
+                    msg += f"   {casa}: {forma_casa}\n"
+                if forma_trasf:
+                    msg += f"   {trasferta}: {forma_trasf}\n"
             
             # Assenti
             assenti_casa = info_analisi.get('assenti_casa', [])
             assenti_trasf = info_analisi.get('assenti_trasferta', [])
+            if assenti_casa or assenti_trasf:
+                msg += "\n"
             if assenti_casa:
                 msg += f"   ❌ Assenti {casa}: {', '.join(assenti_casa)}\n"
             if assenti_trasf:
@@ -208,21 +222,18 @@ class KozaEngine:
             
             msg += "\n"
         
-        # Descrizione
-        descrizione = pronostico.get("descrizione", "")
-        if descrizione:
-            msg += f"📝 **ANALISI AI**:\n{descrizione}\n\n"
+        # Descrizione AI rimossa per output più pulito
+        pass
         
-        # Scommesse consigliate
+        # Scommesse consigliate (senza quote)
         if scommesse:
             msg += f"{'='*45}\n💰 **SCOMMESSE CONSIGLIATE**:\n\n"
             for i, sc in enumerate(scommesse[:MOSTRA_TOP_SCOMMESSE], 1):
                 tipo = sc.get("tipo", "?")
-                quota = sc.get("quota", "1.80")
                 desc = sc.get("descrizione", "")
-                msg += f"{i}. `{tipo}` @ {quota}\n"
+                msg += f"{i}. `{tipo}`\n"
                 if desc:
-                    msg += f"   _{desc}_\n"
+                    msg += f"   {desc}\n"
             msg += "\n"
         
         msg += f"⚠️ _Le previsioni sono generate da AI e non garantiscono risultati._"

@@ -237,8 +237,21 @@ async def button_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
         analisi["squadra_trasferta"] = squadra2
         messaggio = koza_engine.formatta_output(analisi)
         
-        # Invia senza Markdown per evitare errori di parsing
-        await query.edit_message_text(messaggio)
+        # Aggiungi pulsante "Torna indietro"
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 Torna indietro", callback_data="back_date")]
+        ])
+        
+        # Invia come nuovo messaggio (l'analisi rimane in chat)
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=messaggio,
+            reply_markup=keyboard,
+            parse_mode='Markdown'
+        )
+        
+        # Rispondi alla callback query per rimuovere il "loading"
+        await query.answer()
         
     except Exception as e:
         logger.error(f"Errore in button_partita: {e}")
@@ -246,23 +259,41 @@ async def button_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def button_indietro(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Gestisce i pulsanti indietro (back_date, back_comp_*)"""
+    """Gestisce i pulsanti indietro (back_date, back_comp_*)."""
     query = update.callback_query
     await query.answer()
     
     try:
         if query.data == "back_date":
-            # Torna alla selezione date
-            await start(update, context)
+            # Invia nuovo messaggio con menu date (lascia l'analisi in chat)
+            messaggio = (
+                "⚽ **KOZA Bot 3.0** 🤖\n\n"
+                "Seleziona una data per vedere le partite disponibili:\n\n"
+                "🤖 *Powered by Google Gemini AI*"
+            )
+            
+            date_buttons = get_date_buttons()
+            keyboard = [[btn] for btn in date_buttons]
+            keyboard.append([
+                InlineKeyboardButton("✏️ Scrivi manualmente", callback_data="scrivi_manuale")
+            ])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=messaggio,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
         elif query.data.startswith("back_comp_"):
-            # Torna alle competizioni di una specifica data
+            # Torna alle competizioni di una specifica data (modifica messaggio)
             data_str = query.data.split("_")[2]
-            # Simula click sulla data
             query.data = f"date_{data_str}"
             await button_data(update, context)
+            
     except Exception as e:
         logger.error(f"Errore in button_indietro: {e}")
-        await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):

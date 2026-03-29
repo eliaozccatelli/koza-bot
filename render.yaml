@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: koza-bot
+    runtime: python
+    plan: free
+    buildCommand: rm -rf __pycache__ && pip install -r requirements-render.txt
+    startCommand: python bot_tg.py
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: THESPORTSDB_API_KEY
+        sync: false
+      - key: APIFOOTBALL_API_KEY
+        sync: false
+      - key: RAPIDAPI_KEY
+        sync: false
+      - key: PORT
+        value: 10000

@@ -1,0 +1,2 @@
+-r requirements.txt
+# Force rebuild on Render - cache invalidation trigger

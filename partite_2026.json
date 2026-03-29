@@ -1,0 +1,97 @@
+{
+  "partite_per_data": {
+    "2026-03-31": {
+      "competizioni": [
+        {
+          "id": "4490",
+          "nome": "UEFA Nations League",
+          "partite": [
+            {"id": "NL_3103_1", "casa": "Latvia", "trasferta": "Gibraltar", "stadio": "Skonto Stadium", "data": "2026-03-31T18:00:00"},
+            {"id": "NL_3103_2", "casa": "Luxembourg", "trasferta": "Malta", "stadio": "Stade de Luxembourg", "data": "2026-03-31T20:45:00"}
+          ]
+        },
+        {
+          "id": "4866",
+          "nome": "AFC Asian Cup Qualifiers",
+          "partite": [
+            {"id": "AFC_3103_1", "casa": "Tajikistan", "trasferta": "Philippines", "stadio": "Pamir Stadium", "data": "2026-03-31T14:00:00"},
+            {"id": "AFC_3103_2", "casa": "Maldives", "trasferta": "Timor-Leste", "stadio": "National Stadium", "data": "2026-03-31T16:00:00"},
+            {"id": "AFC_3103_3", "casa": "Pakistan", "trasferta": "Myanmar", "stadio": "Jinnah Stadium", "data": "2026-03-31T18:00:00"}
+          ]
+        }
+      ]
+    }
+  },
+  "competizioni_fisse": {
+    "4332": {
+      "nome": "Serie A",
+      "stagione": "2025-26",
+      "giornate": {}
+    },
+    "4328": {
+      "nome": "Premier League", 
+      "stagione": "2025-26",
+      "giornate": {}
+    },
+    "4335": {
+      "nome": "La Liga",
+      "stagione": "2025-26", 
+      "giornate": {}
+    },
+    "4331": {
+      "nome": "Bundesliga",
+      "stagione": "2025-26",
+      "giornate": {}
+    },
+    "4334": {
+      "nome": "Ligue 1",
+      "stagione": "2025-26",
+      "giornate": {}
+    },
+    "4480": {
+      "nome": "Champions League",
+      "stagione": "2025-26",
+      "fasi": {
+        "ottavi": {"andata": "2026-03-10/11", "ritorno": "2026-03-17/18"},
+        "quarti": {"andata": "2026-04-07/08", "ritorno": "2026-04-14/15"},
+        "semifinali": {"andata": "2026-04-28/29", "ritorno": "2026-05-05/06"},
+        "finale": {"data": "2026-05-30", "luogo": "Allianz Arena, Monaco"}
+      }
+    },
+    "4481": {
+      "nome": "Europa League",
+      "stagione": "2025-26",
+      "fasi": {
+        "ottavi": {"andata": "2026-03-12", "ritorno": "2026-03-19"},
+        "quarti": {"andata": "2026-04-09", "ritorno": "2026-04-16"},
+        "semifinali": {"andata": "2026-04-30", "ritorno": "2026-05-07"},
+        "finale": {"data": "2026-05-21", "luogo": "Stadio Olimpico, Roma"}
+      }
+    },
+    "5007": {
+      "nome": "Conference League",
+      "stagione": "2025-26",
+      "fasi": {
+        "ottavi": {"andata": "2026-03-12", "ritorno": "2026-03-19"},
+        "quarti": {"andata": "2026-04-09", "ritorno": "2026-04-16"},
+        "semifinali": {"andata": "2026-04-30", "ritorno": "2026-05-07"},
+        "finale": {"data": "2026-05-28", "luogo": "Stadion Wankdorf, Berna"}
+      }
+    },
+    "WC2026": {
+      "nome": "FIFA World Cup 2026",
+      "data_inizio": "2026-06-11",
+      "data_fine": "2026-07-19",
+      "luogo": "USA, Canada, Messico",
+      "fasi": {
+        "gironi": "2026-06-11/26",
+        "ottavi": "2026-06-27/30",
+        "quarti": "2026-07-03/04",
+        "semifinali": "2026-07-07/08",
+        "finale": {"data": "2026-07-19", "luogo": "MetLife Stadium, New York"}
+      }
+    }
+  },
+  "ultimo_aggiornamento": "2026-03-29",
+  "note": "Aggiungere nuove partite sotto 'partite_per_data' con formato YYYY-MM-DD"
+}

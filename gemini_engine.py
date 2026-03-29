@@ -18,61 +18,134 @@ GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 DEFAULT_MODEL = "gemini-2.0-flash"
 
 
+def _get_gemini_api_keys():
+    """Ottiene la lista di API key Gemini dalla config o env."""
+    try:
+        from config import GEMINI_API_KEYS
+        if GEMINI_API_KEYS:
+            # Rimuovi eventuali virgolette dalle key
+            return [k.strip().strip('"').strip("'") for k in GEMINI_API_KEYS if k.strip()]
+    except ImportError:
+        pass
+    
+    # Fallback a variabile singola
+    key = os.getenv("GEMINI_API_KEY", "")
+    if key:
+        # Rimuovi virgolette esterne e splitta
+        key = key.strip().strip('"').strip("'")
+        return [k.strip().strip('"').strip("'") for k in key.split(",") if k.strip()]
+    return []
+
+
 class GeminiEngine:
     """Motore AI basato su Google Gemini per analisi calcistica."""
     
-    def __init__(self, api_key=None, model=DEFAULT_MODEL):
-        self.api_key = api_key or GEMINI_API_KEY
+    def __init__(self, api_keys=None, model=DEFAULT_MODEL):
+        # Supporta singola key o lista di key
+        if api_keys is None:
+            api_keys = _get_gemini_api_keys()
+        elif isinstance(api_keys, str):
+            api_keys = [api_keys]
+        
+        self.api_keys = api_keys if api_keys else [GEMINI_API_KEY] if GEMINI_API_KEY else []
+        self.current_key_index = 0  # Index della key attualmente in uso
         self.model = model
         self.base_url = f"{GEMINI_BASE_URL}/{model}"
         self.session = requests.Session()
         
-    def _call_gemini(self, prompt, temperature=0.7, max_tokens=2048):
-        """Chiama l'API Gemini con il prompt fornito."""
-        if not self.api_key:
-            logger.error("API Key Gemini non configurata")
+    def _get_current_api_key(self):
+        """Ritorna l'API key corrente."""
+        if not self.api_keys:
             return None
-            
-        url = f"{self.base_url}:generateContent?key={self.api_key}"
+        return self.api_keys[self.current_key_index]
+    
+    def _switch_to_next_key(self):
+        """Passa alla prossima API key disponibile."""
+        if len(self.api_keys) > 1:
+            self.current_key_index = (self.current_key_index + 1) % len(self.api_keys)
+            logger.info(f"🔄 Switching to Gemini API key {self.current_key_index + 1}/{len(self.api_keys)}")
+            return True
+        return False
         
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }],
-            "generationConfig": {
-                "temperature": temperature,
-                "maxOutputTokens": max_tokens,
-                "topP": 0.95,
-                "topK": 40
+    def _call_gemini(self, prompt, temperature=0.7, max_tokens=2048):
+        """Chiama l'API Gemini con il prompt fornito. Prova multiple key se disponibili."""
+        if not self.api_keys:
+            logger.error("Nessuna API Key Gemini configurata")
+            return None
+        
+        original_key_index = self.current_key_index
+        attempts = 0
+        max_attempts = len(self.api_keys)
+        
+        while attempts < max_attempts:
+            api_key = self._get_current_api_key()
+            if not api_key:
+                logger.error("API Key Gemini non valida")
+                return None
+            
+            url = f"{self.base_url}:generateContent?key={api_key}"
+            
+            payload = {
+                "contents": [{
+                    "parts": [{"text": prompt}]
+                }],
+                "generationConfig": {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_tokens,
+                    "topP": 0.95,
+                    "topK": 40
+                }
             }
-        }
-        
-        try:
-            response = self.session.post(
-                url,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=60
-            )
             
-            if response.status_code != 200:
-                logger.error(f"Errore Gemini API: {response.status_code} - {response.text[:200]}")
+            try:
+                response = self.session.post(
+                    url,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                    timeout=60
+                )
+                
+                if response.status_code == 429:
+                    # Quota exceeded - prova prossima key
+                    logger.warning(f"API key {self.current_key_index + 1} quota exceeded (429)")
+                    if self._switch_to_next_key():
+                        attempts += 1
+                        continue
+                    else:
+                        logger.error("Tutte le API key hanno superato la quota")
+                        return None
+                
+                if response.status_code != 200:
+                    logger.error(f"Errore Gemini API: {response.status_code} - {response.text[:200]}")
+                    # Per errori diversi da 429, prova comunque la prossima key
+                    if self._switch_to_next_key():
+                        attempts += 1
+                        continue
+                    return None
+                
+                # Successo! Resetta l'index per future chiamate
+                data = response.json()
+                
+                if "candidates" in data and len(data["candidates"]) > 0:
+                    content = data["candidates"][0].get("content", {})
+                    parts = content.get("parts", [])
+                    if parts:
+                        # Ripristina index originale per mantenere consistenza
+                        self.current_key_index = original_key_index
+                        return parts[0].get("text", "").strip()
+                
+                logger.warning("Risposta Gemini vuota o malformata")
                 return None
                 
-            data = response.json()
-            
-            if "candidates" in data and len(data["candidates"]) > 0:
-                content = data["candidates"][0].get("content", {})
-                parts = content.get("parts", [])
-                if parts:
-                    return parts[0].get("text", "").strip()
-                    
-            logger.warning("Risposta Gemini vuota o malformata")
-            return None
-            
-        except Exception as e:
-            logger.error(f"Errore chiamata Gemini: {e}")
-            return None
+            except Exception as e:
+                logger.error(f"Errore chiamata Gemini: {e}")
+                if self._switch_to_next_key():
+                    attempts += 1
+                    continue
+                return None
+        
+        logger.error(f"Tutte le {max_attempts} API key hanno fallito")
+        return None
     
     def _parse_json_response(self, text):
         """Estrae JSON dalla risposta testuale di Gemini."""
@@ -293,10 +366,175 @@ Rispondi SOLO con il JSON valido, nessun testo aggiuntivo."""
         
         if data_parsed:
             logger.info(f"Analisi Gemini completata per {squadra_casa} vs {squadra_trasferta}")
+            # Sovrascrivi scommesse con quelle intelligenti basate sul risultato
+            risultato = data_parsed.get("pronostico", {}).get("risultato_esatto", "1-1")
+            data_parsed["scommesse_consigliate"] = self._generate_smart_scommesse(
+                risultato, squadra_casa, squadra_trasferta
+            )
             return data_parsed
         else:
             logger.warning("Risposta Gemini non parsabile, uso default")
             return self._default_analysis(squadra_casa, squadra_trasferta)
+    
+    def _generate_smart_scommesse(self, risultato, casa, trasferta):
+        """
+        Genera scommesse intelligenti basate sul risultato esatto previsto.
+        Esempio: se previsto 3-0 → Over 2.5, Multigol 2-4, 1
+        """
+        try:
+            # Parse risultato esatto (formato "2-1")
+            gol_casa, gol_trasf = map(int, risultato.split('-'))
+            totale_gol = gol_casa + gol_trasf
+            
+            scommesse = []
+            
+            # 1. Esito principale basato sul risultato
+            if gol_casa > gol_trasf:
+                margin = gol_casa - gol_trasf
+                if margin >= 2:
+                    scommesse.append({
+                        "tipo": "1",
+                        "descrizione": f"Vittoria {casa} netta (previsto {risultato})"
+                    })
+                    scommesse.append({
+                        "tipo": "1 -1.5",
+                        "descrizione": f"{casa} vince con almeno 2 gol di margine"
+                    })
+                else:
+                    scommesse.append({
+                        "tipo": "1",
+                        "descrizione": f"Vittoria {casa} (previsto {risultato})"
+                    })
+                    scommesse.append({
+                        "tipo": "1X",
+                        "descrizione": f"{casa} non perde"
+                    })
+            elif gol_trasf > gol_casa:
+                margin = gol_trasf - gol_casa
+                if margin >= 2:
+                    scommesse.append({
+                        "tipo": "2",
+                        "descrizione": f"Vittoria {trasferta} netta (previsto {risultato})"
+                    })
+                else:
+                    scommesse.append({
+                        "tipo": "2",
+                        "descrizione": f"Vittoria {trasferta} (previsto {risultato})"
+                    })
+            else:
+                # Pareggio
+                scommesse.append({
+                    "tipo": "X",
+                    "descrizione": f"Pareggio (previsto {risultato})"
+                })
+                scommesse.append({
+                    "tipo": "Under 2.5",
+                    "descrizione": "Partita con pochi gol"
+                })
+            
+            # 2. Over/Under e Multigol basati sul totale gol
+            if totale_gol >= 3:
+                scommesse.append({
+                    "tipo": "Over 2.5",
+                    "descrizione": f"Partita aperta ({totale_gol} gol previsti)"
+                })
+                
+                # Over progressivi per molti gol
+                if totale_gol >= 4:
+                    scommesse.append({
+                        "tipo": "Over 3.5",
+                        "descrizione": "Molti gol attesi"
+                    })
+                if totale_gol >= 6:
+                    scommesse.append({
+                        "tipo": "Over 5.5",
+                        "descrizione": f"Partita goal-goal ({totale_gol} gol!)"
+                    })
+                
+                # Multigol adattivo in base al totale
+                if totale_gol <= 4:
+                    scommesse.append({
+                        "tipo": "Multigol 2-4",
+                        "descrizione": "Range gol più probabile"
+                    })
+                elif totale_gol <= 6:
+                    scommesse.append({
+                        "tipo": "Multigol 3-5",
+                        "descrizione": "Partita con gol"
+                    })
+                else:  # 7+ gol (es. 4-3, 5-2)
+                    scommesse.append({
+                        "tipo": "Multigol 4-6",
+                        "descrizione": f"Partita molto aperta ({totale_gol} gol!)"
+                    })
+                    scommesse.append({
+                        "tipo": "Over 4.5",
+                        "descrizione": "Almeno 5 gol previsti"
+                    })
+            elif totale_gol <= 2:
+                scommesse.append({
+                    "tipo": "Under 2.5",
+                    "descrizione": f"Partita chiusa ({totale_gol} gol previsti)"
+                })
+                if totale_gol <= 1:
+                    scommesse.append({
+                        "tipo": "Under 1.5",
+                        "descrizione": "Massimo 1 gol atteso"
+                    })
+                scommesse.append({
+                    "tipo": "Multigol 0-2",
+                    "descrizione": "Pochi gol previsti"
+                })
+            else:
+                # Caso limite (2.5 gol)
+                scommesse.append({
+                    "tipo": "Over 1.5",
+                    "descrizione": "Almeno 2 gol"
+                })
+            
+            # 3. Gol/No Gol basato su chi segna
+            if gol_casa > 0 and gol_trasf > 0:
+                scommesse.append({
+                    "tipo": "Gol",
+                    "descrizione": f"Entrambe segnano (risultato previsto {risultato})"
+                })
+            elif gol_casa > 0 and gol_trasf == 0:
+                scommesse.append({
+                    "tipo": f"No Gol {trasferta}",
+                    "descrizione": f"{trasferta} non segna"
+                })
+                scommesse.append({
+                    "tipo": f"Gol {casa}",
+                    "descrizione": f"{casa} segna almeno {gol_casa} gol"
+                })
+            elif gol_trasf > 0 and gol_casa == 0:
+                scommesse.append({
+                    "tipo": f"No Gol {casa}",
+                    "descrizione": f"{casa} non segna"
+                })
+                scommesse.append({
+                    "tipo": f"Gol {trasferta}",
+                    "descrizione": f"{trasferta} segna almeno {gol_trasf} gol"
+                })
+            else:
+                # 0-0
+                scommesse.append({
+                    "tipo": "No Gol",
+                    "descrizione": "Nessuna segna (risultato previsto 0-0)"
+                })
+                scommesse.append({
+                    "tipo": "Under 0.5",
+                    "descrizione": "Partita senza gol"
+                })
+            
+            return scommesse[:4]  # Max 4 scommesse
+            
+        except (ValueError, IndexError):
+            # Fallback se parsing fallisce
+            return [
+                {"tipo": "1X2", "descrizione": "Esito finale"},
+                {"tipo": "Over/Under 2.5", "descrizione": "Totale gol"}
+            ]
     
     def _default_analysis(self, casa, trasferta):
         """
@@ -442,7 +680,7 @@ Rispondi SOLO con il JSON valido, nessun testo aggiuntivo."""
                 "assenti_trasferta": [],
                 "ultimi_scontri": []
             },
-            "scommesse_consigliate": scommesse[:4]  # Max 4 scommesse
+            "scommesse_consigliate": self._generate_smart_scommesse(risultato, casa, trasferta)
         }
     
     def get_info_squadra(self, nome_squadra):
@@ -526,13 +764,101 @@ Rispondi SOLO con il JSON valido."""
             
         return self._parse_json_response(response) or {}
 
+    def analisi_live(self, squadra_casa, squadra_trasferta, risultato_live, tempo, statistiche_live, prob_pre_partita=None):
+        """
+        Analizza le statistiche live con Gemini AI e fornisce pronostico aggiornato.
+        
+        Args:
+            squadra_casa: Nome squadra casa
+            squadra_trasferta: Nome squadra trasferta  
+            risultato_live: Risultato attuale (es. "2-1")
+            tempo: Minuto di gioco
+            statistiche_live: Dict con statistiche per squadra
+            prob_pre_partita: Probabilità pre-partita (opzionale)
+        
+        Returns:
+            Dict con analisi aggiornata, nuove probabilità, consigli
+        """
+        # Formatta statistiche per il prompt
+        stats_text = ""
+        for team_name, team_data in statistiche_live.items():
+            stats_dict = team_data.get("stats", {})
+            stats_text += f"\n{team_name}:\n"
+            for key, val in stats_dict.items():
+                if val is not None:
+                    stats_text += f"  - {key}: {val}\n"
+        
+        # Probabilità pre-partita come contesto
+        prob_context = ""
+        if prob_pre_partita:
+            prob_context = f"""
+Probabilità pre-partita:
+- 1 (vittoria {squadra_casa}): {prob_pre_partita.get('1', 33)}%
+- X (pareggio): {prob_pre_partita.get('X', 33)}%  
+- 2 (vittoria {squadra_trasferta}): {prob_pre_partita.get('2', 33)}%
+"""
+        
+        prompt = f"""Sei un esperto analista calcistico. Analizza questa partita IN DIRETTA e aggiorna le probabilità basandoti sulle statistiche live.
+
+PARTITA: {squadra_casa} vs {squadra_trasferta}
+TEMPO: {tempo} minuti
+RISULTATO ATTUALE: {risultato_live}
+
+STATISTICHE LIVE:{stats_text}
+{prob_context}
+
+Fornisci un'analisi AGGIORNATA considerando:
+1. Chi sta dominando il gioco (possesso, tiri, pericolosità)
+2. Se il risultato attuale è sorprendente o atteso
+3. Probabilità che il risultato cambi nel tempo rimanente
+4. Squadra più stanca / più fresca
+5. Pressione offensiva attuale
+
+Rispondi SOLO con questo JSON ESATTO:
+{{
+  "analisi_testuale": "L'Italia sta dominando con 70% possesso ma ha segnato solo 1 gol...",
+  "probabilita_aggiornate": {{
+    "1": 75,
+    "X": 15, 
+    "2": 10
+  }},
+  "pronostico_finale": "2-0",
+  "confidence": 70,
+  "fattori_chiave": [
+    "Supremazia del possesso",
+    "Più tiri in porta",
+    "Trasferta in difficoltà"
+  ],
+  "consigli_live": [
+    {{"tipo": "1", "descrizione": "Vittoria casa molto probabile"}},
+    {{"tipo": "Under 3.5", "descrizione": "Partita controllata"}}
+  ]
+}}
+
+Confidence 0-100. Probabilità devono sommare a 100. Analisi realistica basata sui dati."""
+
+        response = self._call_gemini(prompt, temperature=0.7, max_tokens=2048)
+        
+        if not response:
+            logger.error("Gemini non ha risposto per l'analisi live")
+            return None
+            
+        data_parsed = self._parse_json_response(response)
+        
+        if data_parsed:
+            logger.info(f"Analisi live Gemini completata per {squadra_casa} vs {squadra_trasferta}")
+            return data_parsed
+        else:
+            logger.warning("Risposta Gemini live non parsabile")
+            return None
+
 
 # Istanza singleton
 gemini_engine = None
 
-def get_gemini_engine(api_key=None):
+def get_gemini_engine(api_keys=None):
     """Ritorna l'istanza singleton del motore Gemini."""
     global gemini_engine
     if gemini_engine is None:
-        gemini_engine = GeminiEngine(api_key=api_key)
+        gemini_engine = GeminiEngine(api_keys=api_keys)
     return gemini_engine

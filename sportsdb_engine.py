@@ -9,10 +9,25 @@ import logging
 import requests
 from datetime import datetime, timedelta
 
+from config import LEGHE_PRINCIPALI
+
 logger = logging.getLogger(__name__)
 
 THESPORTSDB_API_KEY = os.getenv("THESPORTSDB_API_KEY", "123")  # Default free key
 THESPORTSDB_BASE_URL = "https://www.thesportsdb.com/api/v1/json"
+
+# Carica fallback JSON se esiste
+FALLBACK_JSON_PATH = os.path.join(os.path.dirname(__file__), "partite_2026.json")
+
+def _carica_fallback_json():
+    """Carica partite dal file JSON locale."""
+    try:
+        if os.path.exists(FALLBACK_JSON_PATH):
+            with open(FALLBACK_JSON_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        logger.warning(f"Errore caricamento fallback JSON: {e}")
+    return {"partite_per_data": {}}
 
 # ID leghe principali in TheSportsDB
 LEGA_IDS = {
@@ -22,7 +37,8 @@ LEGA_IDS = {
     "Bundesliga": "4331",
     "Ligue 1": "4334",
     "Champions League": "4480",
-    "Europa League": "4481"
+    "Europa League": "4481",
+    "Conference League": "5007"
 }
 
 
@@ -55,6 +71,7 @@ class SportsDBEngine:
     def get_partite_del_giorno(self, data=None, sport="Soccer"):
         """
         Recupera partite del giorno specificato.
+        MOSTRA SOLO COMPETIZIONI PRINCIPALI (whitelist in config.py)
         Endpoint: /eventsday.php
         """
         if data is None:
@@ -73,22 +90,29 @@ class SportsDBEngine:
             return self._get_fallback_partite(data)
 
         events = result.get("events", [])
-        logger.info(f"TheSportsDB: trovate {len(events)} partite")
+        logger.info(f"TheSportsDB: trovate {len(events)} partite totali")
 
-        # Organizza per competizione
+        # Organizza per competizione (SOLO leghe principali)
         competizioni = {}
         for event in events:
             lega = event.get("strLeague", "Unknown")
             lega_id = event.get("idLeague", "0")
+            
+            # FILTRO: Mostra solo competizioni in whitelist
+            if lega_id not in LEGHE_PRINCIPALI:
+                logger.info(f"FILTRO: Partita '{event.get('strEvent', 'N/A')}' scartata - ID lega '{lega_id}' ('{lega}') non in whitelist")
+                continue  # Salta leghe minori, femminili, etc.
+            
+            nome_visualizzato = LEGHE_PRINCIPALI.get(lega_id, lega)
 
-            if lega not in competizioni:
-                competizioni[lega] = {
+            if lega_id not in competizioni:
+                competizioni[lega_id] = {
                     "id": lega_id,
-                    "nome": lega,
+                    "nome": nome_visualizzato,
                     "partite": []
                 }
 
-            competizioni[lega]["partite"].append({
+            competizioni[lega_id]["partite"].append({
                 "id": event.get("idEvent"),
                 "casa": event.get("strHomeTeam"),
                 "trasferta": event.get("strAwayTeam"),
@@ -97,24 +121,9 @@ class SportsDBEngine:
                 "round": event.get("intRound")
             })
         
-        # Se mancano competizioni principali, aggiungi dal fallback
-        fallback_data = self._get_fallback_partite(data)
-        fallback_comps = {comp["nome"]: comp for comp in fallback_data.get("competizioni", [])}
+        # NOTA: Mostra SOLO competizioni con partite REALI dall'API
+        # Non aggiungiamo fallback automatico per evitare pulsanti vuoti
         
-        # Lista competizioni principali da mostrare sempre
-        leghe_principali = [
-            "Italian Serie A",
-            "English Premier League", 
-            "Spanish La Liga",
-            "German Bundesliga",
-            "French Ligue 1"
-        ]
-        
-        for lega_nome in leghe_principali:
-            if lega_nome not in competizioni and lega_nome in fallback_comps:
-                competizioni[lega_nome] = fallback_comps[lega_nome]
-                logger.info(f"Aggiunta fallback: {lega_nome}")
-
         return {"competizioni": list(competizioni.values())}
 
     def get_partite_per_lega(self, lega_id, data=None):
@@ -204,8 +213,36 @@ class SportsDBEngine:
         }
 
     def _get_fallback_partite(self, data):
-        """Fallback con partite statiche se API fallisce."""
-        logger.warning("Using fallback partite")
+        """Fallback con partite statiche se API fallisce.
+        
+        Priorità:
+        1. File JSON partite_2026.json (se esiste per quella data)
+        2. Fallback statico generico
+        """
+        data_str = data.strftime("%Y-%m-%d")
+        logger.info(f"Cerco fallback per data: {data_str}")
+        
+        # Prova prima il JSON
+        json_data = _carica_fallback_json()
+        partite_json = json_data.get("partite_per_data", {}).get(data_str)
+        
+        if partite_json and partite_json.get("competizioni"):
+            logger.info(f"✓ Trovate {len(partite_json['competizioni'])} competizioni nel JSON fallback")
+            # Filtra solo le competizioni in whitelist
+            competizioni_filtrate = []
+            for comp in partite_json["competizioni"]:
+                comp_id = comp.get("id")
+                if comp_id in LEGHE_PRINCIPALI:
+                    comp["nome"] = LEGHE_PRINCIPALI.get(comp_id, comp.get("nome"))
+                    competizioni_filtrate.append(comp)
+                    logger.info(f"  - {comp['nome']}: {len(comp.get('partite', []))} partite")
+            
+            if competizioni_filtrate:
+                return {"competizioni": competizioni_filtrate}
+            logger.warning("JSON presente ma nessuna competizione in whitelist")
+        
+        # Fallback statico generico
+        logger.warning("Using fallback statico generico")
         giorno = data.strftime('%d/%m/%Y')
         return {
             "competizioni": [
@@ -248,6 +285,22 @@ class SportsDBEngine:
                     "partite": [
                         {"id": "FR1_1", "casa": "Paris Saint-Germain", "trasferta": "Monaco", "stadio": "Parc des Princes"},
                         {"id": "FR1_2", "casa": "Lille", "trasferta": "Marseille", "stadio": "Stade Pierre-Mauroy"}
+                    ]
+                },
+                {
+                    "id": "4480",
+                    "nome": f"Champions League - {giorno}",
+                    "partite": [
+                        {"id": "UCL_1", "casa": "Real Madrid", "trasferta": "Manchester City", "stadio": "Santiago Bernabeu"},
+                        {"id": "UCL_2", "casa": "Bayern Monaco", "trasferta": "Paris Saint-Germain", "stadio": "Allianz Arena"}
+                    ]
+                },
+                {
+                    "id": "4481",
+                    "nome": f"Europa League - {giorno}",
+                    "partite": [
+                        {"id": "UEL_1", "casa": "Manchester United", "trasferta": "Roma", "stadio": "Old Trafford"},
+                        {"id": "UEL_2", "casa": "Liverpool", "trasferta": "Ajax", "stadio": "Anfield"}
                     ]
                 }
             ]
