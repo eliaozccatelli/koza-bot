@@ -179,8 +179,23 @@ class KozaEngine:
         return result
 
     def get_partite_campionato(self, comp_id, data=None):
-        """Ritorna lista di partite per una competizione usando TheSportsDB."""
+        """Ritorna lista di partite per una competizione."""
+        if data is None:
+            data = datetime.now().date()
+            
+        # 1. Prova con TheSportsDB
         partite = self.sportsdb.get_partite_per_lega(comp_id, data)
+        
+        # 2. Se TheSportsDB non trova, prova JSON fallback
+        if not partite:
+            logger.info(f"Comp {comp_id}: TheSportsDB non ha trovato partite, cerco nel JSON fallback")
+            json_data = self.sportsdb.get_fallback_json_partite(data)
+            competizioni = json_data.get("competizioni", [])
+            for comp in competizioni:
+                if comp.get("id") == comp_id:
+                    partite = comp.get("partite", [])
+                    logger.info(f"  ✓ Trovate {len(partite)} partite nel JSON per {comp_id}")
+                    break
         
         result = []
         for p in partite:
@@ -189,7 +204,7 @@ class KozaEngine:
             trasferta = p.get("trasferta", "Unknown")
             result.append((casa, trasferta, match_id))
         
-        logger.info(f"Comp {comp_id}: {len(result)} partite trovate")
+        logger.info(f"Comp {comp_id}: {len(result)} partite trovate totali")
         return result
 
     # =========================
