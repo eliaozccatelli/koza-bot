@@ -179,21 +179,46 @@ class KozaEngine:
         return result
 
     def get_partite_campionato(self, comp_id, data=None):
-        """Ritorna lista di partite per una competizione."""
+        """Ritorna lista di partite per una competizione.
+        
+        Ordine fallback:
+        1. TheSportsDB
+        2. API-Football (se TheSportsDB non trova)
+        3. JSON fallback (ultima risorsa)
+        """
         if data is None:
             data = datetime.now().date()
+        
+        partite = []
+        sources_tried = []
             
         # 1. Prova con TheSportsDB
         partite = self.sportsdb.get_partite_per_lega(comp_id, data)
+        sources_tried.append("TheSportsDB")
+        if partite:
+            logger.info(f"Comp {comp_id}: trovate {len(partite)} partite su TheSportsDB")
         
-        # 2. Se TheSportsDB non trova, prova JSON fallback
+        # 2. Se TheSportsDB non trova, prova API-Football
         if not partite:
-            logger.info(f"Comp {comp_id}: TheSportsDB non ha trovato partite, cerco nel JSON fallback")
+            logger.info(f"Comp {comp_id}: TheSportsDB non ha trovato partite, provo API-Football")
+            apifootball_data = self.apifootball.get_partite_del_giorno(data)
+            competizioni = apifootball_data.get("competizioni", [])
+            for comp in competizioni:
+                if comp.get("id") == comp_id:
+                    partite = comp.get("partite", [])
+                    sources_tried.append("API-Football")
+                    logger.info(f"  ✓ Trovate {len(partite)} partite su API-Football per {comp_id}")
+                    break
+        
+        # 3. Se API-Football non trova, prova JSON fallback
+        if not partite:
+            logger.info(f"Comp {comp_id}: API-Football non ha trovato partite, provo JSON fallback")
             json_data = self.sportsdb.get_fallback_json_partite(data)
             competizioni = json_data.get("competizioni", [])
             for comp in competizioni:
                 if comp.get("id") == comp_id:
                     partite = comp.get("partite", [])
+                    sources_tried.append("JSON-Fallback")
                     logger.info(f"  ✓ Trovate {len(partite)} partite nel JSON per {comp_id}")
                     break
         
@@ -204,7 +229,8 @@ class KozaEngine:
             trasferta = p.get("trasferta", "Unknown")
             result.append((casa, trasferta, match_id))
         
-        logger.info(f"Comp {comp_id}: {len(result)} partite trovate totali")
+        source_str = " -> ".join(sources_tried) if sources_tried else "nessuna"
+        logger.info(f"Comp {comp_id}: {len(result)} partite totali (fonti provate: {source_str})")
         return result
 
     # =========================
