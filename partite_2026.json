@@ -3,62 +3,28 @@
     "2026-03-31": {
       "competizioni": [
         {
-          "id": "4490",
-          "nome": "UEFA Nations League",
+          "id": "WCQ_EUR_PLAYOFF",
+          "nome": "Finali Play-off UEFA - Qualificazioni Mondiali 2026",
           "partite": [
-            {"id": "NL_3103_1", "casa": "Latvia", "trasferta": "Gibraltar", "stadio": "Skonto Stadium", "data": "2026-03-31T18:00:00"},
-            {"id": "NL_3103_2", "casa": "Luxembourg", "trasferta": "Malta", "stadio": "Stade de Luxembourg", "data": "2026-03-31T20:45:00"}
+            {"id": "WCQ_EUR_PO_1", "casa": "Bosnia ed Erzegovina", "trasferta": "Italia", "stadio": "Zenica (BIH)", "data": "2026-03-31T20:45:00"},
+            {"id": "WCQ_EUR_PO_2", "casa": "Svezia", "trasferta": "Polonia", "stadio": "Solna (SWE)", "data": "2026-03-31T20:45:00"},
+            {"id": "WCQ_EUR_PO_3", "casa": "Kosovo", "trasferta": "Turchia", "stadio": "Pristina (KOS)", "data": "2026-03-31T20:45:00"},
+            {"id": "WCQ_EUR_PO_4", "casa": "Repubblica Ceca", "trasferta": "Danimarca", "stadio": "Praga (CZE)", "data": "2026-03-31T20:45:00"}
           ]
         },
         {
-          "id": "4866",
-          "nome": "AFC Asian Cup Qualifiers",
+          "id": "WCQ_INTER_FIFA",
+          "nome": "Torneo di Play-off FIFA (Interconfederali)",
           "partite": [
-            {"id": "AFC_3103_1", "casa": "Tajikistan", "trasferta": "Philippines", "stadio": "Pamir Stadium", "data": "2026-03-31T14:00:00"},
-            {"id": "AFC_3103_2", "casa": "Maldives", "trasferta": "Timor-Leste", "stadio": "National Stadium", "data": "2026-03-31T16:00:00"},
-            {"id": "AFC_3103_3", "casa": "Pakistan", "trasferta": "Myanmar", "stadio": "Jinnah Stadium", "data": "2026-03-31T18:00:00"}
+            {"id": "WCQ_INT_1", "casa": "RD del Congo", "trasferta": "Giamaica", "stadio": "Guadalajara, Messico", "data": "2026-03-31T21:00:00"}
           ]
         },
         {
-          "id": "WCQ_EUR",
-          "nome": "World Cup Qualifiers Europe",
+          "id": "FIFA_SERIES",
+          "nome": "FIFA Series - Amichevoli Internazionali",
           "partite": [
-            {"id": "WCQ_3103_1", "casa": "Italy", "trasferta": "Ukraine", "stadio": "Stadio Olimpico", "data": "2026-03-31T20:45:00"},
-            {"id": "WCQ_3103_2", "casa": "Poland", "trasferta": "Sweden", "stadio": "PGE Narodowy", "data": "2026-03-31T18:00:00"},
-            {"id": "WCQ_3103_3", "casa": "Wales", "trasferta": "Scotland", "stadio": "Millennium Stadium", "data": "2026-03-31T20:45:00"}
-          ]
-        },
-        {
-          "id": "WCQ_ASIA",
-          "nome": "World Cup Qualifiers Asia",
-          "partite": [
-            {"id": "WCQ_ASIA_3103_1", "casa": "Japan", "trasferta": "Bahrain", "stadio": "Saitama Stadium", "data": "2026-03-31T12:00:00"},
-            {"id": "WCQ_ASIA_3103_2", "casa": "South Korea", "trasferta": "Jordan", "stadio": "Seoul World Cup Stadium", "data": "2026-03-31T13:00:00"},
-            {"id": "WCQ_ASIA_3103_3", "casa": "Australia", "trasferta": "Oman", "stadio": "Stadium Australia", "data": "2026-03-31T11:00:00"}
-          ]
-        },
-        {
-          "id": "WCQ_AFR",
-          "nome": "World Cup Qualifiers Africa",
-          "partite": [
-            {"id": "WCQ_AFR_3103_1", "casa": "Morocco", "trasferta": "Zambia", "stadio": "Stade Mohammed V", "data": "2026-03-31T20:00:00"},
-            {"id": "WCQ_AFR_3103_2", "casa": "Egypt", "trasferta": "Ghana", "stadio": "Cairo International Stadium", "data": "2026-03-31T18:00:00"}
-          ]
-        },
-        {
-          "id": "WCQ_SAM",
-          "nome": "World Cup Qualifiers South America",
-          "partite": [
-            {"id": "WCQ_SAM_3103_1", "casa": "Argentina", "trasferta": "Brazil", "stadio": "La Bombonera", "data": "2026-03-31T21:00:00"},
-            {"id": "WCQ_SAM_3103_2", "casa": "Uruguay", "trasferta": "Colombia", "stadio": "Estadio Centenario", "data": "2026-03-31T22:00:00"}
-          ]
-        },
-        {
-          "id": "WCQ_CON",
-          "nome": "World Cup Qualifiers CONCACAF",
-          "partite": [
-            {"id": "WCQ_CON_3103_1", "casa": "USA", "trasferta": "Mexico", "stadio": "MetLife Stadium", "data": "2026-03-31T21:00:00"},
-            {"id": "WCQ_CON_3103_2", "casa": "Canada", "trasferta": "Costa Rica", "stadio": "BC Place", "data": "2026-03-31T22:00:00"}
+            {"id": "FIFA_SER_1", "casa": "Algeria", "trasferta": "Uruguay", "stadio": "Torino, Italia", "data": "2026-03-31T20:00:00"},
+            {"id": "FIFA_SER_2", "casa": "Qatar", "trasferta": "Argentina", "stadio": "Lusail, Qatar", "data": "2026-03-31T19:00:00"}
           ]
         }
       ]
