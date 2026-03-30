@@ -143,9 +143,12 @@ async def button_campionato(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     try:
         # Estrai comp_id e data dal callback_data (formato: comp_COMPID_YYYY-MM-DD)
+        # ATTENZIONE: comp_id può contenere underscore (es: WCQ_EUR)
         parts = query.data.split("_")
-        comp_id = parts[1]  # ID è stringa (es: "IT1", "EN1")
-        data_str = parts[2] if len(parts) > 2 else None
+        # Format: comp_[COMP_ID]_[DATE] dove DATE è YYYY-MM-DD
+        # Quindi prendiamo tutto tra "comp_" e l'ultimo underscore (la data)
+        data_str = parts[-1] if len(parts) >= 3 else None
+        comp_id = "_".join(parts[1:-1])  # Tutto tra comp_ e la data
         selected_date = datetime.fromisoformat(data_str).date() if data_str else datetime.now().date()
         
         partite = koza_engine.get_partite_campionato(comp_id, selected_date)
