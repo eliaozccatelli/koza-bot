@@ -98,46 +98,84 @@ class KozaEngine:
     def get_competizioni_con_partite(self, data=None):
         """Ritorna competizioni con partite disponibili.
         
-        Ordine di ricerca:
+        Strategia: Unisce risultati da TUTTE le fonti disponibili:
         1. TheSportsDB API (dati reali principali)
-        2. API-Football (copre piú competizioni, limite +3gg)
-        3. JSON Fallback (partite statiche configurate manualmente)
+        2. API-Football (qualificazioni mondiali, +3gg)
+        3. JSON Fallback (partite statiche manuali)
+        
+        Non si ferma alla prima fonte che trova partite!
         """
         logger.info(f"=== RICERCA COMPETIZIONI === Data: {data}")
         
-        # 1. Prova prima con TheSportsDB
+        # Dizionario per accumulare tutte le competizioni (evita duplicati)
+        tutte_competizioni = {}
+        sources_found = []
+        
+        # 1. Prova con TheSportsDB
+        logger.info("1. Cerco con TheSportsDB...")
         partite_data = self.sportsdb.get_partite_del_giorno(data)
         competizioni = partite_data.get("competizioni", [])
-        
         if competizioni:
-            source = "TheSportsDB"
-            logger.info(f"✓ TheSportsDB ha trovato {len(competizioni)} competizioni")
+            sources_found.append("TheSportsDB")
+            for comp in competizioni:
+                comp_id = comp.get("id")
+                if comp_id:
+                    tutte_competizioni[comp_id] = comp
+                    logger.info(f"  ✓ [TheSportsDB] {comp.get('nome')}: {len(comp.get('partite', []))} partite")
         else:
-            # 2. Se TheSportsDB non trova, prova API-Football
-            logger.info("TheSportsDB: nessuna partita, provo API-Football")
-            partite_data = self.apifootball.get_partite_del_giorno(data)
-            competizioni = partite_data.get("competizioni", [])
-            
-            if competizioni:
-                source = "API-Football"
-                logger.info(f"✓ API-Football ha trovato {len(competizioni)} competizioni")
-            else:
-                # 3. Se anche API-Football fallisce, usa JSON fallback
-                logger.info("API-Football: nessuna partita, uso JSON fallback")
-                partite_data = self.sportsdb._get_fallback_json_partite(data)
-                competizioni = partite_data.get("competizioni", [])
-                source = "JSON-Fallback"
+            logger.info("  → TheSportsDB: nessuna partita")
         
+        # 2. Prova con API-Football (sempre, anche se TheSportsDB ha trovato)
+        logger.info("2. Cerco con API-Football...")
+        partite_data = self.apifootball.get_partite_del_giorno(data)
+        competizioni = partite_data.get("competizioni", [])
+        if competizioni:
+            sources_found.append("API-Football")
+            for comp in competizioni:
+                comp_id = comp.get("id")
+                if comp_id and comp_id not in tutte_competizioni:
+                    tutte_competizioni[comp_id] = comp
+                    logger.info(f"  ✓ [API-Football] {comp.get('nome')}: {len(comp.get('partite', []))} partite")
+                elif comp_id:
+                    # Aggiungi partite alla competizione esistente
+                    existing = tutte_competizioni[comp_id]
+                    new_matches = comp.get("partite", [])
+                    existing["partite"] = existing.get("partite", []) + new_matches
+                    logger.info(f"  ✓ [API-Football] {comp.get('nome')}: +{len(new_matches)} partite aggiunte")
+        else:
+            logger.info("  → API-Football: nessuna partita")
+        
+        # 3. Prova con JSON Fallback (sempre, per coprire date lontane)
+        logger.info("3. Cerco con JSON Fallback...")
+        partite_data = self.sportsdb.get_fallback_json_partite(data)
+        competizioni = partite_data.get("competizioni", [])
+        if competizioni:
+            sources_found.append("JSON-Fallback")
+            for comp in competizioni:
+                comp_id = comp.get("id")
+                if comp_id and comp_id not in tutte_competizioni:
+                    tutte_competizioni[comp_id] = comp
+                    logger.info(f"  ✓ [JSON] {comp.get('nome')}: {len(comp.get('partite', []))} partite")
+                elif comp_id:
+                    # Aggiungi partite alla competizione esistente
+                    existing = tutte_competizioni[comp_id]
+                    new_matches = comp.get("partite", [])
+                    existing["partite"] = existing.get("partite", []) + new_matches
+                    logger.info(f"  ✓ [JSON] {comp.get('nome')}: +{len(new_matches)} partite aggiunte")
+        else:
+            logger.info("  → JSON Fallback: nessuna partita")
+        
+        # Converte in lista risultato
         result = []
-        for comp in competizioni:
-            comp_id = comp.get("id")
+        for comp_id, comp in tutte_competizioni.items():
             comp_name = comp.get("nome", "Unknown")
-            if comp_id:
-                self.competitions[comp_id] = comp_name
-                result.append((comp_id, comp_name))
-                logger.info(f"✓ [{source}] {comp_name}: {len(comp.get('partite', []))} partite")
+            self.competitions[comp_id] = comp_name
+            result.append((comp_id, comp_name))
         
-        logger.info(f"Totale competizioni con partite: {len(result)} (source: {source})")
+        sources_str = ", ".join(sources_found) if sources_found else "NESSUNA"
+        total_matches = sum(len(comp.get("partite", [])) for comp in tutte_competizioni.values())
+        logger.info(f"✓✓✓ TOTALE: {len(result)} competizioni, {total_matches} partite (fonti: {sources_str})")
+        
         return result
 
     def get_partite_campionato(self, comp_id, data=None):
