@@ -212,6 +212,34 @@ class SportsDBEngine:
             "risultato": f"{event.get('intHomeScore', '-')}:{event.get('intAwayScore', '-')}"
         }
 
+    def get_fallback_json_partite(self, data):
+        """
+        Recupera partite dal JSON fallback (partite_2026.json).
+        Metodo pubblico per accesso da logica_koza.py.
+        """
+        data_str = data.strftime("%Y-%m-%d")
+        logger.info(f"Cerco partite JSON fallback per data: {data_str}")
+        
+        json_data = _carica_fallback_json()
+        partite_json = json_data.get("partite_per_data", {}).get(data_str)
+        
+        if partite_json and partite_json.get("competizioni"):
+            # Filtra solo le competizioni in whitelist
+            competizioni_filtrate = []
+            for comp in partite_json["competizioni"]:
+                comp_id = comp.get("id")
+                if comp_id in LEGHE_PRINCIPALI:
+                    comp["nome"] = LEGHE_PRINCIPALI.get(comp_id, comp.get("nome"))
+                    competizioni_filtrate.append(comp)
+                    logger.info(f"  - {comp['nome']}: {len(comp.get('partite', []))} partite")
+            
+            if competizioni_filtrate:
+                logger.info(f"✓ JSON fallback: {len(competizioni_filtrate)} competizioni")
+                return {"competizioni": competizioni_filtrate}
+        
+        logger.warning(f"JSON fallback: nessuna partita trovata per {data_str}")
+        return {"competizioni": []}
+
     def _get_fallback_partite(self, data):
         """Fallback con partite statiche se API fallisce.
         

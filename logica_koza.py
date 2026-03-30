@@ -96,21 +96,37 @@ class KozaEngine:
     # =========================
 
     def get_competizioni_con_partite(self, data=None):
-        """Ritorna competizioni con partite disponibili usando TheSportsDB, fallback su API-Football."""
+        """Ritorna competizioni con partite disponibili.
+        
+        Ordine di ricerca:
+        1. TheSportsDB API (dati reali principali)
+        2. API-Football (copre piú competizioni, limite +3gg)
+        3. JSON Fallback (partite statiche configurate manualmente)
+        """
         logger.info(f"=== RICERCA COMPETIZIONI === Data: {data}")
         
-        # Prova prima con TheSportsDB
+        # 1. Prova prima con TheSportsDB
         partite_data = self.sportsdb.get_partite_del_giorno(data)
         competizioni = partite_data.get("competizioni", [])
         
-        # Se TheSportsDB non trova partite, prova con API-Football
-        if not competizioni:
-            logger.info("TheSportsDB: nessuna partita trovata, provo fallback su API-Football")
+        if competizioni:
+            source = "TheSportsDB"
+            logger.info(f"✓ TheSportsDB ha trovato {len(competizioni)} competizioni")
+        else:
+            # 2. Se TheSportsDB non trova, prova API-Football
+            logger.info("TheSportsDB: nessuna partita, provo API-Football")
             partite_data = self.apifootball.get_partite_del_giorno(data)
             competizioni = partite_data.get("competizioni", [])
-            source = "API-Football"
-        else:
-            source = "TheSportsDB"
+            
+            if competizioni:
+                source = "API-Football"
+                logger.info(f"✓ API-Football ha trovato {len(competizioni)} competizioni")
+            else:
+                # 3. Se anche API-Football fallisce, usa JSON fallback
+                logger.info("API-Football: nessuna partita, uso JSON fallback")
+                partite_data = self.sportsdb._get_fallback_json_partite(data)
+                competizioni = partite_data.get("competizioni", [])
+                source = "JSON-Fallback"
         
         result = []
         for comp in competizioni:
