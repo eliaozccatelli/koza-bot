@@ -228,6 +228,11 @@ LEGHE_PRINCIPALI = {
     "5007": "Conference League", # Conference League
     "4490": "UEFA Nations League", # Nations League
     "4866": "AFC Asian Cup Qualifiers", # Qualificazioni AFC
+    "WCQ_EUR": "World Cup Qualifiers Europe",  # Qualificazioni Mondiali Europa
+    "WCQ_ASIA": "World Cup Qualifiers Asia",   # Qualificazioni Mondiali Asia
+    "WCQ_AFR": "World Cup Qualifiers Africa",  # Qualificazioni Mondiali Africa
+    "WCQ_CON": "World Cup Qualifiers CONCACAF", # Qualificazioni Nord/Centro America
+    "WCQ_SAM": "World Cup Qualifiers South America", # Qualificazioni Sud America
 }
 # Whitelist per API-Football (usa ID numerici diversi)
 LEGHE_PRINCIPALI_APIFOOTBALL = {

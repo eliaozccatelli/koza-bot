@@ -18,6 +18,48 @@
             {"id": "AFC_3103_2", "casa": "Maldives", "trasferta": "Timor-Leste", "stadio": "National Stadium", "data": "2026-03-31T16:00:00"},
             {"id": "AFC_3103_3", "casa": "Pakistan", "trasferta": "Myanmar", "stadio": "Jinnah Stadium", "data": "2026-03-31T18:00:00"}
           ]
+        },
+        {
+          "id": "WCQ_EUR",
+          "nome": "World Cup Qualifiers Europe",
+          "partite": [
+            {"id": "WCQ_3103_1", "casa": "Italy", "trasferta": "Ukraine", "stadio": "Stadio Olimpico", "data": "2026-03-31T20:45:00"},
+            {"id": "WCQ_3103_2", "casa": "Poland", "trasferta": "Sweden", "stadio": "PGE Narodowy", "data": "2026-03-31T18:00:00"},
+            {"id": "WCQ_3103_3", "casa": "Wales", "trasferta": "Scotland", "stadio": "Millennium Stadium", "data": "2026-03-31T20:45:00"}
+          ]
+        },
+        {
+          "id": "WCQ_ASIA",
+          "nome": "World Cup Qualifiers Asia",
+          "partite": [
+            {"id": "WCQ_ASIA_3103_1", "casa": "Japan", "trasferta": "Bahrain", "stadio": "Saitama Stadium", "data": "2026-03-31T12:00:00"},
+            {"id": "WCQ_ASIA_3103_2", "casa": "South Korea", "trasferta": "Jordan", "stadio": "Seoul World Cup Stadium", "data": "2026-03-31T13:00:00"},
+            {"id": "WCQ_ASIA_3103_3", "casa": "Australia", "trasferta": "Oman", "stadio": "Stadium Australia", "data": "2026-03-31T11:00:00"}
+          ]
+        },
+        {
+          "id": "WCQ_AFR",
+          "nome": "World Cup Qualifiers Africa",
+          "partite": [
+            {"id": "WCQ_AFR_3103_1", "casa": "Morocco", "trasferta": "Zambia", "stadio": "Stade Mohammed V", "data": "2026-03-31T20:00:00"},
+            {"id": "WCQ_AFR_3103_2", "casa": "Egypt", "trasferta": "Ghana", "stadio": "Cairo International Stadium", "data": "2026-03-31T18:00:00"}
+          ]
+        },
+        {
+          "id": "WCQ_SAM",
+          "nome": "World Cup Qualifiers South America",
+          "partite": [
+            {"id": "WCQ_SAM_3103_1", "casa": "Argentina", "trasferta": "Brazil", "stadio": "La Bombonera", "data": "2026-03-31T21:00:00"},
+            {"id": "WCQ_SAM_3103_2", "casa": "Uruguay", "trasferta": "Colombia", "stadio": "Estadio Centenario", "data": "2026-03-31T22:00:00"}
+          ]
+        },
+        {
+          "id": "WCQ_CON",
+          "nome": "World Cup Qualifiers CONCACAF",
+          "partite": [
+            {"id": "WCQ_CON_3103_1", "casa": "USA", "trasferta": "Mexico", "stadio": "MetLife Stadium", "data": "2026-03-31T21:00:00"},
+            {"id": "WCQ_CON_3103_2", "casa": "Canada", "trasferta": "Costa Rica", "stadio": "BC Place", "data": "2026-03-31T22:00:00"}
+          ]
         }
       ]
     }
