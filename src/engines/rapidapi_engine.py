@@ -8,7 +8,7 @@ import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 
-from config import RAPIDAPI_KEY, RAPIDAPI_HOST
+from src.core.config import RAPIDAPI_KEY, RAPIDAPI_HOST
 
 logger = logging.getLogger(__name__)
 

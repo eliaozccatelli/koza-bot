@@ -22,8 +22,8 @@ from telegram.ext import (
     CallbackQueryHandler,
     filters,
 )
-from logica_koza import KozaEngine, get_koza_engine
-from config import TELEGRAM_TOKEN, LOG_LEVEL, GEMINI_API_KEY
+from src.core.logica_koza import KozaEngine, get_koza_engine
+from src.core.config import TELEGRAM_TOKEN, LOG_LEVEL, GEMINI_API_KEY
 
 logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -167,13 +167,15 @@ async def button_campionato(update: Update, context: ContextTypes.DEFAULT_TYPE):
         messaggio = f"⚽ **{comp_name}** ({selected_date.strftime('%d/%m/%Y')})\n\nScegli una partita:\n"
         
         keyboard = []
-        for team1, team2, match_id in partite:
+        for team1, team2, match_id, api_source in partite:
+            match_id = str(match_id)  # Normalizza a stringa per coerenza con callback_data
             # Salva info partita nel context per recuperarla dopo
             if 'partite_disponibili' not in context.user_data:
                 context.user_data['partite_disponibili'] = {}
             context.user_data['partite_disponibili'][match_id] = {
                 'casa': team1,
-                'trasferta': team2
+                'trasferta': team2,
+                'api_source': api_source,
             }
             keyboard.append([
                 InlineKeyboardButton(
@@ -221,11 +223,11 @@ async def button_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         match_id = parts[1]
-        
+
         # Recupera nomi squadre dal context
         partite_cache = context.user_data.get('partite_disponibili', {})
         partita_info = partite_cache.get(match_id, {})
-        
+
         if partita_info:
             squadra1 = partita_info['casa']
             squadra2 = partita_info['trasferta']
@@ -233,9 +235,9 @@ async def button_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Fallback: estrai dal match_id (formato: IT1_1)
             squadra1 = "Casa"
             squadra2 = "Trasferta"
-        
-        # Usa direttamente Gemini AI per analizzare
-        analisi = koza_engine.analizza_partita(squadra1, squadra2)
+
+        # Analisi smart: rileva automaticamente se live/finita/programmata
+        analisi = koza_engine.analizza_partita_smart(squadra1, squadra2, match_id=match_id)
         analisi["squadra_casa"] = squadra1
         analisi["squadra_trasferta"] = squadra2
         messaggio = koza_engine.formatta_output(analisi)
@@ -266,8 +268,11 @@ async def button_indietro(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
+    logger.info(f"button_indietro chiamato con data: {query.data}")
+    
     try:
         if query.data == "back_date":
+            logger.info("Torno al menu date (back_date)")
             # Invia nuovo messaggio con menu date (lascia l'analisi in chat)
             messaggio = (
                 "⚽ **KOZA Bot 3.0** 🤖\n\n"
@@ -288,15 +293,25 @@ async def button_indietro(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=reply_markup,
                 parse_mode='Markdown'
             )
+            logger.info("Menu date inviato con successo")
             
         elif query.data.startswith("back_comp_"):
+            logger.info(f"Torno alle competizioni: {query.data}")
             # Torna alle competizioni di una specifica data (modifica messaggio)
             data_str = query.data.split("_")[2]
             query.data = f"date_{data_str}"
             await button_data(update, context)
             
     except Exception as e:
-        logger.error(f"Errore in button_indietro: {e}")
+        logger.error(f"Errore in button_indietro: {e}", exc_info=True)
+        try:
+            await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
+        except:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"❌ Errore: `{str(e)}`",
+                parse_mode='Markdown'
+            )
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -402,7 +417,7 @@ def main():
     
     print("🚀 Avvio KOZA Bot 3.0 con Gemini AI...")
     
-    from config import GEMINI_API_KEY, TELEGRAM_TOKEN as TOKEN_CHECK
+    from src.core.config import GEMINI_API_KEY, TELEGRAM_TOKEN as TOKEN_CHECK
     print(f"🔑 GEMINI_API_KEY caricata: {GEMINI_API_KEY[:20]}..." if GEMINI_API_KEY else "❌ GEMINI_API_KEY NON TROVATA")
     print(f"🔐 TELEGRAM_TOKEN caricato: {TOKEN_CHECK[:10]}..." if TOKEN_CHECK else "❌ TELEGRAM_TOKEN NON TROVATO")
     print("🤖 Fonte AI: Google Gemini 2.0 Flash\n")

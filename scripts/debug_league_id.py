@@ -4,7 +4,7 @@ Debug: Perché cercando per league=32 non trova le partite?
 import os
 os.environ['APIFOOTBALL_API_KEY'] = 'b2ca0ee4248ced374a8bb454ffb290bf'
 
-from apifootball_engine import get_apifootball_engine
+from src.engines.apifootball_engine import get_apifootball_engine
 
 engine = get_apifootball_engine()
 

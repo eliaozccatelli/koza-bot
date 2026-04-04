@@ -233,6 +233,9 @@ LEGHE_PRINCIPALI = {
     "WCQ_AFR": "World Cup Qualifiers Africa",  # Qualificazioni Mondiali Africa
     "WCQ_CON": "World Cup Qualifiers CONCACAF", # Qualificazioni Nord/Centro America
     "WCQ_SAM": "World Cup Qualifiers South America", # Qualificazioni Sud America
+    "WCQ_EUR_PLAYOFF": "Finali Play-off UEFA - Qualificazioni Mondiali 2026",  # Play-off UEFA 31 marzo
+    "WCQ_INTER_FIFA": "Torneo di Play-off FIFA (Interconfederali)",  # Interconfederali 31 marzo
+    "FIFA_SERIES": "FIFA Series - Amichevoli Internazionali",  # Amichevoli 31 marzo
 }
 # Whitelist per API-Football (usa ID numerici diversi)
 LEGHE_PRINCIPALI_APIFOOTBALL = {

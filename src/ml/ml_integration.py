@@ -5,7 +5,7 @@ Usa modello ML insieme a Gemini (approccio ibrido).
 import pandas as pd
 import os
 from datetime import datetime, timedelta
-from ml_predictor import MLMatchPredictor
+from src.ml.ml_predictor import MLMatchPredictor
 import logging
 
 logger = logging.getLogger(__name__)

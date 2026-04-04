@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from rapidfuzz import process, utils
 
-from config import (
+from src.core.config import (
     GEMINI_API_KEY,
     THESPORTSDB_API_KEY,
     APIFOOTBALL_API_KEY,
@@ -15,10 +15,10 @@ from config import (
     LOG_LEVEL,
     MOSTRA_TOP_SCOMMESSE,
 )
-from gemini_engine import GeminiEngine, get_gemini_engine
-from sportsdb_engine import SportsDBEngine, get_sportsdb_engine
-from apifootball_engine import APIFootballEngine, get_apifootball_engine
-from teams_fallback import SQUADRE_FALLBACK, COMPETIZIONI_FALLBACK
+from src.engines.gemini_engine import GeminiEngine, get_gemini_engine
+from src.engines.sportsdb_engine import SportsDBEngine, get_sportsdb_engine
+from src.engines.apifootball_engine import APIFootballEngine, get_apifootball_engine
+from src.utils.teams_fallback import SQUADRE_FALLBACK, COMPETIZIONI_FALLBACK
 
 logging.basicConfig(level=LOG_LEVEL)
 logger = logging.getLogger(__name__)
@@ -227,7 +227,8 @@ class KozaEngine:
             match_id = p.get("id", f"{p.get('casa', '')}_{p.get('trasferta', '')}")
             casa = p.get("casa", "Unknown")
             trasferta = p.get("trasferta", "Unknown")
-            result.append((casa, trasferta, match_id))
+            api_source = p.get("api_source")
+            result.append((casa, trasferta, match_id, api_source))
         
         source_str = " -> ".join(sources_tried) if sources_tried else "nessuna"
         logger.info(f"Comp {comp_id}: {len(result)} partite totali (fonti provate: {source_str})")
@@ -238,43 +239,238 @@ class KozaEngine:
     # =========================
 
     def analizza_partita(self, squadra_casa, squadra_trasferta, competizione=None, data=None):
-        """Analizza una partita usando Gemini AI."""
+        """Analizza una partita usando Gemini AI (solo pre-partita)."""
         logger.info(f"Analisi partita: {squadra_casa} vs {squadra_trasferta}")
-        
+
         return self.gemini.analizza_partita(
-            squadra_casa, 
-            squadra_trasferta, 
-            competizione=competizione, 
+            squadra_casa,
+            squadra_trasferta,
+            competizione=competizione,
             data=data
         )
 
+    def analizza_partita_smart(self, squadra_casa, squadra_trasferta, match_id=None, competizione=None, data=None):
+        """Analizza partita con rilevamento automatico stato live/finita/programmata."""
+        logger.info(f"Analisi smart: {squadra_casa} vs {squadra_trasferta} (match_id={match_id})")
+
+        # Se abbiamo un match_id numerico (da API-Football), controlla stato
+        if match_id and str(match_id).isdigit():
+            try:
+                status = self.apifootball.get_match_status(int(match_id))
+                if status:
+                    status_short = status.get("status_short", "")
+                    logger.info(f"Stato partita {match_id}: {status_short} ({status.get('status_long', '')})")
+
+                    # PARTITA LIVE
+                    if status_short in ["LIVE", "1H", "2H", "HT", "ET", "PEN_LIVE", "INT"]:
+                        return self._analisi_live(squadra_casa, squadra_trasferta, int(match_id), status)
+
+                    # PARTITA FINITA
+                    if status_short in ["FT", "AET", "PEN", "AWD", "WO"]:
+                        return self._analisi_finita(squadra_casa, squadra_trasferta, status)
+            except Exception as e:
+                logger.warning(f"Errore check stato partita {match_id}: {e}")
+
+        # Default: analisi pre-partita
+        return self.analizza_partita(squadra_casa, squadra_trasferta, competizione=competizione, data=data)
+
+    def _analisi_live(self, squadra_casa, squadra_trasferta, match_id, status):
+        """Genera analisi per partita in corso con dati live."""
+        risultato = status.get("risultato", "0-0")
+        tempo = status.get("tempo", 0)
+
+        logger.info(f"Analisi LIVE: {squadra_casa} vs {squadra_trasferta} - {risultato} ({tempo}')")
+
+        # Recupera statistiche live
+        stats = self.apifootball.get_live_statistics(match_id)
+
+        # Analisi pre-partita per probabilita' di riferimento
+        pre_analisi = self.gemini.analizza_partita(squadra_casa, squadra_trasferta)
+        prob_pre = pre_analisi.get("probabilita", {})
+
+        # Analisi live con Gemini
+        analisi_live = self.gemini.analisi_live(
+            squadra_casa, squadra_trasferta,
+            risultato, tempo,
+            stats or {},
+            prob_pre
+        )
+
+        return {
+            "tipo": "live",
+            "squadra_casa": squadra_casa,
+            "squadra_trasferta": squadra_trasferta,
+            "risultato_live": risultato,
+            "tempo": tempo,
+            "status": status.get("status_long", "Live"),
+            "statistiche_live": stats,
+            "analisi_live": analisi_live,
+            "pronostico": pre_analisi.get("pronostico", {}),
+            "probabilita": pre_analisi.get("probabilita", {}),
+            "analisi": pre_analisi.get("analisi", {}),
+        }
+
+    def _analisi_finita(self, squadra_casa, squadra_trasferta, status):
+        """Genera output per partita terminata."""
+        logger.info(f"Partita FINITA: {squadra_casa} vs {squadra_trasferta} - {status.get('risultato')}")
+
+        return {
+            "tipo": "finita",
+            "squadra_casa": squadra_casa,
+            "squadra_trasferta": squadra_trasferta,
+            "risultato_finale": status.get("risultato", "?-?"),
+            "status": status.get("status_long", "Finished"),
+        }
+
     def formatta_output(self, analisi):
-        """Formatta l'output dell'analisi per Telegram."""
+        """Formatta l'output dell'analisi per Telegram. Gestisce 3 tipi: live, finita, pre-partita."""
+        tipo = analisi.get("tipo")
+
+        if tipo == "live":
+            return self._formatta_live(analisi)
+        elif tipo == "finita":
+            return self._formatta_finita(analisi)
+        else:
+            return self._formatta_pre_partita(analisi)
+
+    def _formatta_live(self, analisi):
+        """Formatta messaggio per partita LIVE."""
+        casa = analisi.get("squadra_casa", "Casa")
+        trasferta = analisi.get("squadra_trasferta", "Trasferta")
+        risultato = analisi.get("risultato_live", "0-0")
+        tempo = analisi.get("tempo", 0)
+        status = analisi.get("status", "Live")
+        stats = analisi.get("statistiche_live") or {}
+        analisi_live = analisi.get("analisi_live") or {}
+
+        msg = (
+            f"🔴 **LIVE - ANALISI KOZA**\n"
+            f"{'='*45}\n\n"
+            f"🏟 **{casa.upper()}** vs **{trasferta.upper()}**\n\n"
+            f"⚽ **RISULTATO**: `{risultato}`\n"
+            f"⏱ **Tempo**: {tempo}' ({status})\n\n"
+        )
+
+        # Statistiche live
+        if stats:
+            msg += f"📊 **STATISTICHE LIVE**:\n"
+            # Prova a mostrare statistiche per entrambe le squadre
+            team_names = list(stats.keys())
+            if len(team_names) >= 2:
+                t1_stats = stats[team_names[0]].get("stats", {})
+                t2_stats = stats[team_names[1]].get("stats", {})
+
+                stat_keys = [
+                    ("Ball Possession", "Possesso"),
+                    ("Total Shots", "Tiri totali"),
+                    ("Shots on Goal", "Tiri in porta"),
+                    ("Corner Kicks", "Calci d'angolo"),
+                    ("Fouls", "Falli"),
+                    ("Yellow Cards", "Ammonizioni"),
+                    ("Red Cards", "Espulsioni"),
+                ]
+                for api_key, label in stat_keys:
+                    v1 = t1_stats.get(api_key)
+                    v2 = t2_stats.get(api_key)
+                    if v1 is not None or v2 is not None:
+                        msg += f"   {label}: {v1 or '-'} - {v2 or '-'}\n"
+                msg += "\n"
+
+        # Analisi live di Gemini
+        if analisi_live:
+            testo = analisi_live.get("analisi_testuale", "")
+            if testo:
+                msg += f"🧠 **ANALISI AI LIVE**:\n{testo}\n\n"
+
+            prob_agg = analisi_live.get("probabilita_aggiornate", {})
+            if prob_agg:
+                msg += f"📈 **PROBABILITA' AGGIORNATE**:\n"
+                msg += f"   • 1 (Casa): {prob_agg.get('1', '?')}%\n"
+                msg += f"   • X (Pareggio): {prob_agg.get('X', '?')}%\n"
+                msg += f"   • 2 (Trasferta): {prob_agg.get('2', '?')}%\n\n"
+
+            pronostico_finale = analisi_live.get("pronostico_finale", "")
+            confidence = analisi_live.get("confidence", 0)
+            if pronostico_finale:
+                msg += f"🎯 **PRONOSTICO FINALE**: `{pronostico_finale}` (confidence: {confidence}%)\n\n"
+
+            fattori = analisi_live.get("fattori_chiave", [])
+            if fattori:
+                msg += f"🔑 **FATTORI CHIAVE**:\n"
+                for f in fattori[:5]:
+                    msg += f"   • {f}\n"
+                msg += "\n"
+
+            consigli = analisi_live.get("consigli_live", [])
+            if consigli:
+                msg += f"{'='*45}\n💰 **CONSIGLI LIVE**:\n\n"
+                for i, c in enumerate(consigli[:4], 1):
+                    tipo = c.get("tipo", "?")
+                    desc = c.get("descrizione", "")
+                    msg += f"{i}. `{tipo}`\n"
+                    if desc:
+                        msg += f"   {desc}\n"
+                msg += "\n"
+
+        msg += f"⚠️ _Analisi live generata da AI. I dati si aggiornano in tempo reale._"
+        return msg
+
+    def _formatta_finita(self, analisi):
+        """Formatta messaggio per partita FINITA."""
+        casa = analisi.get("squadra_casa", "Casa")
+        trasferta = analisi.get("squadra_trasferta", "Trasferta")
+        risultato = analisi.get("risultato_finale", "?-?")
+        status = analisi.get("status", "Terminata")
+
+        try:
+            gol_casa, gol_trasf = map(int, risultato.split("-"))
+            if gol_casa > gol_trasf:
+                esito = f"Vittoria {casa}"
+            elif gol_trasf > gol_casa:
+                esito = f"Vittoria {trasferta}"
+            else:
+                esito = "Pareggio"
+        except (ValueError, IndexError):
+            esito = "N/A"
+
+        msg = (
+            f"🏁 **PARTITA TERMINATA**\n"
+            f"{'='*45}\n\n"
+            f"🏟 **{casa.upper()}** vs **{trasferta.upper()}**\n\n"
+            f"⚽ **RISULTATO FINALE**: `{risultato}`\n"
+            f"🏆 **Esito**: {esito}\n"
+            f"📋 **Stato**: {status}\n\n"
+            f"_La partita e' gia' terminata. Seleziona un'altra partita per un pronostico._"
+        )
+        return msg
+
+    def _formatta_pre_partita(self, analisi):
+        """Formatta messaggio per analisi pre-partita (comportamento originale)."""
         pronostico = analisi.get("pronostico", {})
         probabilita = analisi.get("probabilita", {})
         info_analisi = analisi.get("analisi", {})
         scommesse = analisi.get("scommesse_consigliate", [])
-        
+
         casa = analisi.get("squadra_casa", "Casa")
         trasferta = analisi.get("squadra_trasferta", "Trasferta")
-        
+
         msg = (
             f"🤖 **ANALISI KOZA - Powered by Gemini AI**\n"
             f"{'='*45}\n\n"
             f"🏟 **{casa.upper()}** vs **{trasferta.upper()}**\n\n"
         )
-        
+
         # Pronostico principale
         risultato = pronostico.get("risultato_esatto", "N/A")
         confidence = pronostico.get("confidence", 50)
         vincitore = pronostico.get("vincitore", "incerto")
-        
+
         msg += (
             f"🎯 **PRONOSTICO**: `{risultato}`\n"
             f"💡 **Confidence**: {confidence}%\n"
             f"🏆 **Favorito**: {vincitore}\n\n"
         )
-        
+
         # Probabilità
         msg += f"📊 **PROBABILITA'**:\n"
         msg += f"   • 1 (Casa): {probabilita.get('1', 33)}%\n"
@@ -282,10 +478,9 @@ class KozaEngine:
         msg += f"   • 2 (Trasferta): {probabilita.get('2', 33)}%\n"
         msg += f"   • Over 2.5: {probabilita.get('over25', 50)}%\n"
         msg += f"   • Gol: {probabilita.get('gol', 50)}%\n\n"
-        
-        # Analisi dettagliata (senza forza ratings)
+
+        # Analisi dettagliata
         if info_analisi:
-            # Forma
             forma_casa = info_analisi.get('forma_casa', '')
             forma_trasf = info_analisi.get('forma_trasferta', '')
             if forma_casa or forma_trasf:
@@ -294,8 +489,7 @@ class KozaEngine:
                     msg += f"   {casa}: {forma_casa}\n"
                 if forma_trasf:
                     msg += f"   {trasferta}: {forma_trasf}\n"
-            
-            # Assenti
+
             assenti_casa = info_analisi.get('assenti_casa', [])
             assenti_trasf = info_analisi.get('assenti_trasferta', [])
             if assenti_casa or assenti_trasf:
@@ -304,8 +498,7 @@ class KozaEngine:
                 msg += f"   ❌ Assenti {casa}: {', '.join(assenti_casa)}\n"
             if assenti_trasf:
                 msg += f"   ❌ Assenti {trasferta}: {', '.join(assenti_trasf)}\n"
-            
-            # Scontri diretti
+
             ultimi_scontri = info_analisi.get('ultimi_scontri', [])
             if ultimi_scontri:
                 msg += f"\n⚔️ **ULTIMI SCONTRI**:\n"
@@ -314,13 +507,10 @@ class KozaEngine:
                     ris = scontro.get('risultato', '?-?')
                     vinc = scontro.get('vincitore', 'pareggio')
                     msg += f"   {data}: {ris} (V: {vinc})\n"
-            
+
             msg += "\n"
-        
-        # Descrizione AI rimossa per output più pulito
-        pass
-        
-        # Scommesse consigliate (senza quote)
+
+        # Scommesse consigliate
         if scommesse:
             msg += f"{'='*45}\n💰 **SCOMMESSE CONSIGLIATE**:\n\n"
             for i, sc in enumerate(scommesse[:MOSTRA_TOP_SCOMMESSE], 1):
@@ -330,9 +520,9 @@ class KozaEngine:
                 if desc:
                     msg += f"   {desc}\n"
             msg += "\n"
-        
+
         msg += f"⚠️ _Le previsioni sono generate da AI e non garantiscono risultati._"
-        
+
         return msg
 
     # =========================

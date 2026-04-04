@@ -1,7 +1,7 @@
 """Allena il modello ML con dati storici - FACILE."""
 import pandas as pd
 import os
-from ml_predictor import MLMatchPredictor
+from src.ml.ml_predictor import MLMatchPredictor
 
 print("🚀 Training Modello KOZA ML - Ibrido")
 print("=" * 40)

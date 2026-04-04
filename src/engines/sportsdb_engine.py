@@ -9,7 +9,7 @@ import logging
 import requests
 from datetime import datetime, timedelta
 
-from config import LEGHE_PRINCIPALI
+from src.core.config import LEGHE_PRINCIPALI
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ THESPORTSDB_API_KEY = os.getenv("THESPORTSDB_API_KEY", "123")  # Default free ke
 THESPORTSDB_BASE_URL = "https://www.thesportsdb.com/api/v1/json"
 
 # Carica fallback JSON se esiste
-FALLBACK_JSON_PATH = os.path.join(os.path.dirname(__file__), "partite_2026.json")
+FALLBACK_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "partite_2026.json")
 
 def _carica_fallback_json():
     """Carica partite dal file JSON locale."""

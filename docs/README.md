@@ -240,46 +240,65 @@ Bot: [Analisi AI diretta]
 KOZA/
 │
 ├── 📁 FILE PRINCIPALI
-│   ├── bot_tg.py              # Entry point, interfaccia Telegram
-│   ├── logica_koza.py         # Business logic, orchestrazione
-│   └── config.py              # Configurazioni e whitelist
-│
-├── 📁 MOTORI DATI
-│   ├── sportsdb_engine.py     # TheSportsDB API wrapper
-│   ├── apifootball_engine.py  # API-Football wrapper
-│   ├── gemini_engine.py       # Google Gemini AI wrapper
-│   └── rapidapi_engine.py     # RapidAPI (stats avanzate)
-│
-├── 📁 DATI E FALLBACK
-│   ├── teams_fallback.py      # Database statico squadre
-│   ├── team_ratings.py        # Rating algoritmici squadre
-│   ├── team_form_bridge.py    # Bridge forma reale vs statica
+│   ├── bot.py                 # Entry point principale
+│   ├── requirements.txt       # Dipendenze Python
+│   ├── requirements-render.txt # Dipendenze per Render
+│   ├── render.yaml            # Configurazione Render.com
+│   ├── .env                   # Variabili d'ambiente (non in git)
 │   └── partite_2026.json      # Fallback JSON partite future
 │
-├── 📁 ML (Machine Learning)
-│   ├── ml_integration.py      # Integrazione ML nel flusso
-│   ├── ml_predictor.py        # Modelli ML per predizioni
-│   ├── train_model.py         # Training modelli
-│   └── train_with_live.py     # Training con dati live
+├── 📁 src/                    # Codice sorgente organizzato
+│   ├── bot/
+│   │   └── telegram.py        # Interfaccia Telegram
+│   ├── core/
+│   │   ├── config.py          # Configurazioni e whitelist
+│   │   └── logica_koza.py     # Business logic, orchestrazione
+│   ├── engines/
+│   │   ├── gemini_engine.py   # Google Gemini AI wrapper
+│   │   ├── sportsdb_engine.py # TheSportsDB API wrapper
+│   │   ├── apifootball_engine.py  # API-Football wrapper
+│   │   └── rapidapi_engine.py # RapidAPI (stats avanzate)
+│   ├── utils/
+│   │   ├── teams_fallback.py  # Database statico squadre
+│   │   ├── team_ratings.py    # Rating algoritmici squadre
+│   │   ├── team_form_bridge.py # Bridge forma reale vs statica
+│   │   └── message_parser.py  # Parser messaggi
+│   └── ml/
+│       ├── ml_integration.py  # Integrazione ML nel flusso
+│       ├── ml_predictor.py    # Modelli ML per predizioni
+│       ├── train_model.py     # Training modelli
+│       └── train_with_live.py # Training con dati live
 │
-├── 📁 TEST E DEBUG
-│   ├── test_whitelist.py      # Test whitelist competizioni
-│   ├── test_wc_qualifiers.py  # Test qualificazioni mondiali
-│   ├── test_gemini.py         # Test connessione Gemini
-│   └── debug_league_id.py     # Debug ID leghe
+├── 📁 tests/                  # Test e script di debug
+│   ├── test_whitelist.py
+│   ├── test_wc_qualifiers.py
+│   ├── test_gemini.py
+│   ├── test_season_fix.py
+│   └── test_clean_whitelist.py
 │
-├── 📁 DOCUMENTAZIONE
+├── 📁 scripts/                # Script di utility
+│   ├── check_all_playoffs.py
+│   ├── search_playoffs.py
+│   └── debug_league_id.py
+│
+├── 📁 docs/                   # Documentazione
 │   ├── README.md              # Questo file
 │   ├── ANALISI_PROGETTO.md    # Analisi tecnica dettagliata
 │   ├── QUICKSTART.md          # Guida rapida 5 minuti
-│   ├── TUTORIAL_ML.md         # Tutorial Machine Learning
-│   └── .env.example           # Template variabili d'ambiente
+│   └── TUTORIAL_ML.md         # Tutorial Machine Learning
 │
-└── 📁 CONFIGURAZIONE
-    ├── requirements.txt       # Dipendenze Python
-    ├── requirements-render.txt # Dipendenze per Render
-    ├── render.yaml            # Configurazione Render.com
-    └── .gitignore             # File ignorati da Git
+├── 📁 data/                   # Dati CSV per training ML
+│   ├── combined_training_data.csv
+│   ├── serie_a_2024.csv
+│   ├── serie_a_2025.csv
+│   └── serie_a_2026.csv
+│
+├── 📁 models/                 # Modelli ML salvati
+│   └── ml_model.pkl
+│
+└── 📁 logs/                   # File di log
+    ├── group_messages.log
+    └── group_photos.log
 ```
 
 ## Sistemi di Fallback
@@ -425,7 +444,7 @@ cp .env.example .env
 ### 5. Avvia il Bot
 
 ```bash
-python bot_tg.py
+python bot.py
 ```
 
 **Output Atteso:**

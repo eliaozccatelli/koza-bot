@@ -6,11 +6,11 @@ os.environ['APIFOOTBALL_API_KEY'] = 'b2ca0ee4248ced374a8bb454ffb290bf'
 os.environ['THESPORTSDB_API_KEY'] = '123'
 
 # Reset singleton
-import apifootball_engine
+import src.engines.apifootball_engine as apifootball_engine
 apifootball_engine._apifootball_engine_instance = None
 
-from apifootball_engine import get_apifootball_engine
-from config import LEGHE_PRINCIPALI_APIFOOTBALL
+from src.engines.apifootball_engine import get_apifootball_engine
+from src.core.config import LEGHE_PRINCIPALI_APIFOOTBALL
 
 print('=== WHITELIST API-FOOTBALL ===')
 for k, v in LEGHE_PRINCIPALI_APIFOOTBALL.items():

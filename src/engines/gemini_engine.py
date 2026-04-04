@@ -9,7 +9,7 @@ import logging
 import requests
 from datetime import datetime, timedelta
 
-from team_ratings import get_team_rating, get_team_form
+from src.utils.team_ratings import get_team_rating, get_team_form
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ DEFAULT_MODEL = "gemini-2.0-flash"
 def _get_gemini_api_keys():
     """Ottiene la lista di API key Gemini dalla config o env."""
     try:
-        from config import GEMINI_API_KEYS
+        from src.core.config import GEMINI_API_KEYS
         if GEMINI_API_KEYS:
             # Rimuovi eventuali virgolette dalle key
             return [k.strip().strip('"').strip("'") for k in GEMINI_API_KEYS if k.strip()]

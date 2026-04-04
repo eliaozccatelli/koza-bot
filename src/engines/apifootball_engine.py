@@ -10,7 +10,7 @@ import requests
 from datetime import datetime, timedelta
 from rapidfuzz import fuzz
 
-from config import LEGHE_PRINCIPALI_APIFOOTBALL
+from src.core.config import LEGHE_PRINCIPALI_APIFOOTBALL
 
 logger = logging.getLogger(__name__)
 

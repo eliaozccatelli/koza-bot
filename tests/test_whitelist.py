@@ -4,8 +4,8 @@ Test per verificare se ID 32 è ora in whitelist
 import os
 os.environ['APIFOOTBALL_API_KEY'] = 'b2ca0ee4248ced374a8bb454ffb290bf'
 
-from apifootball_engine import get_apifootball_engine
-from config import LEGHE_PRINCIPALI_APIFOOTBALL
+from src.engines.apifootball_engine import get_apifootball_engine
+from src.core.config import LEGHE_PRINCIPALI_APIFOOTBALL
 
 engine = get_apifootball_engine()
 

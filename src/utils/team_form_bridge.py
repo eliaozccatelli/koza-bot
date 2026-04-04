@@ -7,8 +7,8 @@ import logging
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
-from rapidapi_engine import get_rapidapi_engine
-from team_ratings import get_team_form as get_static_team_form, TEAM_RATINGS
+from src.engines.rapidapi_engine import get_rapidapi_engine
+from src.utils.team_ratings import get_team_form as get_static_team_form, TEAM_RATINGS
 
 logger = logging.getLogger(__name__)
 

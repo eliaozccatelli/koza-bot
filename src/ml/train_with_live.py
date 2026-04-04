@@ -6,7 +6,7 @@ Unisce dati storici (2024-2026) + dati live (parsed_matches.csv)
 import pandas as pd
 import os
 from datetime import datetime
-from ml_predictor import MLMatchPredictor
+from src.ml.ml_predictor import MLMatchPredictor
 
 def load_parsed_matches(filename='parsed_matches.csv'):
     """Carica partite parsate dai messaggi."""

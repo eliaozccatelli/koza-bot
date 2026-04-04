@@ -4,7 +4,7 @@ Test rapido per verificare l'integrazione Gemini API
 import os
 os.environ["GEMINI_API_KEY"] = "AIzaSyB0AGuOdwTGLqlFUDhMoA8LN_03Lfx0Fiw"
 
-from gemini_engine import GeminiEngine
+from src.engines.gemini_engine import GeminiEngine
 
 def test_gemini():
     print("🧪 Test Gemini API...")
