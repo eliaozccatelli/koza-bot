@@ -14,7 +14,6 @@ if sys.platform == 'win32':
 import logging
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import BadRequest
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -23,8 +22,8 @@ from telegram.ext import (
     CallbackQueryHandler,
     filters,
 )
-from src.core.logica_koza import KozaEngine, get_koza_engine
-from src.core.config import TELEGRAM_TOKEN, LOG_LEVEL, GEMINI_API_KEY
+from logica_koza import KozaEngine, get_koza_engine
+from config import TELEGRAM_TOKEN, LOG_LEVEL, GEMINI_API_KEY
 
 logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -132,11 +131,6 @@ async def button_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(messaggio, reply_markup=reply_markup, parse_mode='Markdown')
         
-    except BadRequest as e:
-        if "Message is not modified" in str(e):
-            return
-        logger.error(f"Errore in button_data: {e}")
-        await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
     except Exception as e:
         logger.error(f"Errore in button_data: {e}")
         await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
@@ -149,12 +143,9 @@ async def button_campionato(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     try:
         # Estrai comp_id e data dal callback_data (formato: comp_COMPID_YYYY-MM-DD)
-        # ATTENZIONE: comp_id può contenere underscore (es: WCQ_EUR)
         parts = query.data.split("_")
-        # Format: comp_[COMP_ID]_[DATE] dove DATE è YYYY-MM-DD
-        # Quindi prendiamo tutto tra "comp_" e l'ultimo underscore (la data)
-        data_str = parts[-1] if len(parts) >= 3 else None
-        comp_id = "_".join(parts[1:-1])  # Tutto tra comp_ e la data
+        comp_id = int(parts[1])
+        data_str = parts[2] if len(parts) > 2 else None
         selected_date = datetime.fromisoformat(data_str).date() if data_str else datetime.now().date()
         
         partite = koza_engine.get_partite_campionato(comp_id, selected_date)
@@ -173,20 +164,11 @@ async def button_campionato(update: Update, context: ContextTypes.DEFAULT_TYPE):
         messaggio = f"⚽ **{comp_name}** ({selected_date.strftime('%d/%m/%Y')})\n\nScegli una partita:\n"
         
         keyboard = []
-        for team1, team2, match_id, api_source in partite:
-            match_id = str(match_id)  # Normalizza a stringa per coerenza con callback_data
-            # Salva info partita nel context per recuperarla dopo
-            if 'partite_disponibili' not in context.user_data:
-                context.user_data['partite_disponibili'] = {}
-            context.user_data['partite_disponibili'][match_id] = {
-                'casa': team1,
-                'trasferta': team2,
-                'api_source': api_source,
-            }
+        for team1, team2, match_id in partite:
             keyboard.append([
                 InlineKeyboardButton(
                     f"🔥 {team1} vs {team2}",
-                    callback_data=f"match_{match_id}"
+                    callback_data=f"match_{match_id}_{team1}_{team2}"
                 )
             ])
         
@@ -197,11 +179,6 @@ async def button_campionato(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(messaggio, reply_markup=reply_markup, parse_mode='Markdown')
         
-    except BadRequest as e:
-        if "Message is not modified" in str(e):
-            return  # Ignora: il messaggio è già aggiornato
-        logger.error(f"Errore in button_campionato: {e}")
-        await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
     except Exception as e:
         logger.error(f"Errore in button_campionato: {e}")
         await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
@@ -227,171 +204,52 @@ async def button_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer("⏳ Analizzo con Gemini AI...")
     
     try:
-        # Estrai match_id dal callback_data (formato: match_MATCHID)
-        parts = query.data.split("_", 1)
-        if len(parts) < 2:
+        parts = query.data.split("_", 3)
+        if len(parts) < 4:
             await query.edit_message_text("❌ Errore nel parsing")
             return
         
-        match_id = parts[1]
-
-        # Recupera nomi squadre dal context
-        partite_cache = context.user_data.get('partite_disponibili', {})
-        partita_info = partite_cache.get(match_id, {})
-
-        if partita_info:
-            squadra1 = partita_info['casa']
-            squadra2 = partita_info['trasferta']
-        else:
-            # Fallback: estrai dal match_id (formato: IT1_1)
-            squadra1 = "Casa"
-            squadra2 = "Trasferta"
-
-        # Analisi smart: rileva automaticamente se live/finita/programmata
-        analisi = koza_engine.analizza_partita_smart(squadra1, squadra2, match_id=match_id)
+        squadra1 = parts[2]
+        squadra2 = parts[3]
+        
+        # Usa direttamente Gemini AI per analizzare
+        analisi = koza_engine.analizza_partita(squadra1, squadra2)
         analisi["squadra_casa"] = squadra1
         analisi["squadra_trasferta"] = squadra2
         messaggio = koza_engine.formatta_output(analisi)
         
-        # Aggiungi pulsante "Torna indietro"
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔙 Torna indietro", callback_data="back_date")]
-        ])
-        
-        # Invia come nuovo messaggio (l'analisi rimane in chat)
-        await context.bot.send_message(
-            chat_id=query.message.chat_id,
-            text=messaggio,
-            reply_markup=keyboard,
-            parse_mode='Markdown'
-        )
-        
-        # Rispondi alla callback query per rimuovere il "loading"
-        await query.answer()
+        await query.edit_message_text(messaggio, parse_mode='Markdown')
         
     except Exception as e:
-        import traceback
-        logger.error(f"Errore in button_partita: {e}\n{traceback.format_exc()}")
+        logger.error(f"Errore in button_partita: {e}")
         await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
 
 
 async def button_indietro(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Gestisce i pulsanti indietro (back_date, back_comp_*)."""
+    """Gestisce i pulsanti indietro (back_date, back_comp_*)"""
     query = update.callback_query
     await query.answer()
     
-    logger.info(f"button_indietro chiamato con data: {query.data}")
-    
     try:
         if query.data == "back_date":
-            logger.info("Torno al menu date (back_date)")
-            # Invia nuovo messaggio con menu date (lascia l'analisi in chat)
-            messaggio = (
-                "⚽ **KOZA Bot 3.0** 🤖\n\n"
-                "Seleziona una data per vedere le partite disponibili:\n\n"
-                "🤖 *Powered by Google Gemini AI*"
-            )
-            
-            date_buttons = get_date_buttons()
-            keyboard = [[btn] for btn in date_buttons]
-            keyboard.append([
-                InlineKeyboardButton("✏️ Scrivi manualmente", callback_data="scrivi_manuale")
-            ])
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            await context.bot.send_message(
-                chat_id=query.message.chat_id,
-                text=messaggio,
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-            logger.info("Menu date inviato con successo")
-            
+            # Torna alla selezione date
+            await start(update, context)
         elif query.data.startswith("back_comp_"):
-            logger.info(f"Torno alle competizioni: {query.data}")
             # Torna alle competizioni di una specifica data
-            data_str = query.data.replace("back_comp_", "")
-            selected_date = datetime.fromisoformat(data_str).date()
-
-            context.user_data['selected_date'] = selected_date
-            context.user_data['selected_date_str'] = selected_date.strftime('%d/%m/%Y')
-
-            campionati = koza_engine.get_competizioni_con_partite(selected_date)
-
-            if not campionati:
-                keyboard = [[InlineKeyboardButton("◀️ Torna indietro", callback_data="back_date")]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                await query.edit_message_text(
-                    f"⚠️ **Nessuna partita disponibile** il {selected_date.strftime('%d/%m/%Y')}",
-                    reply_markup=reply_markup,
-                    parse_mode='Markdown'
-                )
-                return
-
-            messaggio = f"📅 **Data selezionata**: {selected_date.strftime('%d/%m/%Y')}\n\nScegli un campionato:"
-            keyboard = []
-            for comp_id, comp_name in campionati:
-                keyboard.append([
-                    InlineKeyboardButton(f"⚽ {comp_name}", callback_data=f"comp_{comp_id}_{data_str}")
-                ])
-            keyboard.append([
-                InlineKeyboardButton("◀️ Torna alle date", callback_data="back_date")
-            ])
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.edit_message_text(messaggio, reply_markup=reply_markup, parse_mode='Markdown')
-            
-    except BadRequest as e:
-        if "Message is not modified" in str(e):
-            return
-        logger.error(f"Errore in button_indietro: {e}", exc_info=True)
-        try:
-            await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
-        except:
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=f"❌ Errore: `{str(e)}`",
-                parse_mode='Markdown'
-            )
+            data_str = query.data.split("_")[2]
+            # Simula click sulla data
+            query.data = f"date_{data_str}"
+            await button_data(update, context)
     except Exception as e:
-        logger.error(f"Errore in button_indietro: {e}", exc_info=True)
-        try:
-            await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
-        except:
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=f"❌ Errore: `{str(e)}`",
-                parse_mode='Markdown'
-            )
+        logger.error(f"Errore in button_indietro: {e}")
+        await query.edit_message_text(f"❌ Errore: `{str(e)}`", parse_mode='Markdown')
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Gestisce testo libero: parsa risultati partite O ricerca manuale."""
+    """Gestisce testo libero per ricerca manuale - usa Gemini AI"""
     text = update.message.text.strip()
-
-    # Prova a parsare risultati partite (es: "Inter-Roma 2-1", "Napoli vs Milan 0-0")
-    from src.utils.message_parser import process_message
-    parsed = process_message(text)
-    if parsed:
-        # Risultati trovati e salvati in parsed_matches.csv
-        lines = []
-        for m in parsed['all_results']:
-            lines.append(f"  {m['home_team']} {m['home_goals']}-{m['away_goals']} {m['away_team']} ({m['result']})")
-        saved = parsed['saved_count']
-        skipped = parsed['skipped']
-        total = len(parsed['all_results'])
-        msg = f"✅ **{total} risultat{'o' if total==1 else 'i'} trovat{'o' if total==1 else 'i'}**:\n" + "\n".join(lines)
-        if saved > 0:
-            msg += f"\n\n_💾 {saved} salvat{'o' if saved==1 else 'i'} per ML e forma squadre._"
-        if skipped > 0:
-            msg += f"\n_⏭️ {skipped} duplicat{'o' if skipped==1 else 'i'} ignorat{'o' if skipped==1 else 'i'}._"
-        await update.message.reply_text(msg, parse_mode='Markdown')
-        # Pulisci cache forma cosi' i nuovi dati vengono usati subito
-        from src.utils.team_form_bridge import clear_cache
-        clear_cache()
-        return
-
     parti = text.split()
-
+    
     if len(parti) < 2:
         await update.message.reply_text(
             "💬 Scrivi due squadre separate da spazio:\n`Inter Milan`",
@@ -484,13 +342,76 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(messaggio, parse_mode='Markdown')
 
 
+import subprocess
+
+async def aggiorna(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /aggiorna - Avvia lo scraper dei risultati"""
+    # Verifica se l'utente è l'admin (puoi aggiungere un controllo ID qui)
+    user = update.effective_user
+    logger.info(f"Comando /aggiorna richiesto da {user.first_name} ({user.id})")
+    
+    msg = await update.message.reply_text("🔄 **Aggiornamento risultati in corso...**\nAttendere prego...", parse_mode='Markdown')
+    
+    try:
+        # Esegue lo script di scraping
+        # Usiamo sys.executable per assicurarci di usare lo stesso interprete python (venv)
+        result = subprocess.run(
+            [sys.executable, "scripts/scrape_results.py", "--days", "3"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        
+        # Estrai riepilogo dall'output dello script
+        output = result.stdout
+        riepilogo = "✅ **Aggiornamento completato!**\n\n"
+        if "Partite trovate:" in output:
+            linee = output.split('\n')
+            for linea in linee:
+                if "Partite trovate:" in linea or "Partite salvate:" in linea:
+                    riepilogo += f"• {linea.strip()}\n"
+        else:
+            riepilogo += "Risultati aggiornati con successo."
+            
+        await msg.edit_text(riepilogo, parse_mode='Markdown')
+        
+        # Pulisce la cache della forma squadre per riflettere i nuovi dati
+        from src.utils.team_form_bridge import clear_cache
+        clear_cache()
+        
+    except Exception as e:
+        logger.error(f"Errore durante l'aggiornamento: {e}")
+        await msg.edit_text(f"❌ **Errore durante l'aggiornamento:**\n`{str(e)}`", parse_mode='Markdown')
+
+
 def main():
     """Avvia il bot"""
     global koza_engine
     
     print("🚀 Avvio KOZA Bot 3.0 con Gemini AI...")
     
-    from src.core.config import GEMINI_API_KEY, TELEGRAM_TOKEN as TOKEN_CHECK
+    # --- AUTO-UPDATE STARTUP ---
+    # Controlla se parsed_matches.csv è vecchio (più di 12 ore)
+    try:
+        csv_path = 'parsed_matches.csv'
+        run_scraper = False
+        if not os.path.exists(csv_path):
+            run_scraper = True
+        else:
+            mtime = os.path.getmtime(csv_path)
+            last_update = datetime.fromtimestamp(mtime)
+            if datetime.now() - last_update > timedelta(hours=12):
+                run_scraper = True
+        
+        if run_scraper:
+            print("📅 Dati risultati non aggiornati. Avvio scraper automatico...")
+            subprocess.run([sys.executable, "scripts/scrape_results.py", "--days", "3"], capture_output=True)
+            print("✅ Risultati aggiornati all'avvio!")
+    except Exception as e:
+        print(f"⚠️ Errore scraper all'avvio: {e}")
+    # ---------------------------
+
+    from config import GEMINI_API_KEY, TELEGRAM_TOKEN as TOKEN_CHECK
     print(f"🔑 GEMINI_API_KEY caricata: {GEMINI_API_KEY[:20]}..." if GEMINI_API_KEY else "❌ GEMINI_API_KEY NON TROVATA")
     print(f"🔐 TELEGRAM_TOKEN caricato: {TOKEN_CHECK[:10]}..." if TOKEN_CHECK else "❌ TELEGRAM_TOKEN NON TROVATO")
     print("🤖 Fonte AI: Google Gemini 2.0 Flash\n")
@@ -515,6 +436,7 @@ def main():
     app.add_handler(CommandHandler("predici", predici))
     app.add_handler(CommandHandler("match", match))
     app.add_handler(CommandHandler("schedina", schedina))
+    app.add_handler(CommandHandler("aggiorna", aggiorna))
     
     # Callback handlers per inline buttons
     app.add_handler(CallbackQueryHandler(button_data, pattern="^date_"))

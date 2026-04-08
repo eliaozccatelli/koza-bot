@@ -122,7 +122,7 @@ class MLMatchPredictor:
         
         games_played = len(team_games)
         if games_played == 0:
-            return {'points': 0, 'position': 10, 'win_rate': 0.33}
+            return {'points': 0, 'position': 10, 'win_rate': 0.33, 'goals_diff': 0}
         
         win_rate = wins / games_played
         # Stima posizione: 20 squadre, distribuzione punti

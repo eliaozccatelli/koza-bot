@@ -386,6 +386,393 @@ class APIFootballEngine:
             return None
         return status.get("status_short") in ["LIVE", "1H", "2H", "HT", "ET", "PEN_LIVE", "INT"]
 
+    def cerca_partita_per_squadre(self, squadra_casa, squadra_trasferta, data=None):
+        """
+        Cerca una partita su API-Football per nome squadre.
+        Ritorna il fixture completo con id, status, risultato, etc.
+        Utile quando il match_id originale non e' di API-Football.
+        """
+        if data is None:
+            data = datetime.now().date()
+
+        data_str = data.strftime("%Y-%m-%d")
+        result = self._make_request("fixtures", {
+            "date": data_str,
+            "timezone": "Europe/Rome"
+        })
+
+        if not result or "response" not in result:
+            return None
+
+        fixtures = result.get("response", [])
+        casa_lower = squadra_casa.lower()
+        trasf_lower = squadra_trasferta.lower()
+
+        best_match = None
+        best_score = 0
+
+        for fixture in fixtures:
+            teams = fixture.get("teams", {})
+            home_name = teams.get("home", {}).get("name", "")
+            away_name = teams.get("away", {}).get("name", "")
+
+            # Match fuzzy sui nomi squadra
+            score_home = fuzz.ratio(casa_lower, home_name.lower())
+            score_away = fuzz.ratio(trasf_lower, away_name.lower())
+
+            # Prova anche match parziale
+            score_home = max(score_home, fuzz.partial_ratio(casa_lower, home_name.lower()))
+            score_away = max(score_away, fuzz.partial_ratio(trasf_lower, away_name.lower()))
+
+            combined = (score_home + score_away) / 2
+
+            if combined > best_score and combined >= 60:
+                best_score = combined
+                best_match = fixture
+
+        if not best_match:
+            logger.info(f"API-Football: nessun match trovato per {squadra_casa} vs {squadra_trasferta}")
+            return None
+
+        fixture_data = best_match.get("fixture", {})
+        status = fixture_data.get("status", {})
+        teams = best_match.get("teams", {})
+        goals = best_match.get("goals", {})
+
+        logger.info(f"API-Football: trovato match {teams.get('home',{}).get('name')} vs {teams.get('away',{}).get('name')} (score={best_score:.0f})")
+
+        return {
+            "fixture_id": fixture_data.get("id"),
+            "casa": teams.get("home", {}).get("name"),
+            "trasferta": teams.get("away", {}).get("name"),
+            "status_short": status.get("short"),
+            "status_long": status.get("long"),
+            "tempo": status.get("elapsed"),
+            "risultato": f"{goals.get('home', 0)}-{goals.get('away', 0)}",
+            "timestamp": fixture_data.get("timestamp"),
+        }
+
+    def get_standings(self, league_id, season=None):
+        """
+        Recupera la classifica di una lega.
+        Ritorna lista di dict con 'team' e 'rank'.
+        """
+        if not season:
+            season = datetime.now().year
+
+        data = self._make_request("standings", params={
+            "league": league_id,
+            "season": season,
+        })
+
+        if not data or "response" not in data:
+            # Prova con anno precedente (stagione a cavallo)
+            if not season or season == datetime.now().year:
+                data = self._make_request("standings", params={
+                    "league": league_id,
+                    "season": datetime.now().year - 1,
+                })
+
+        if not data or "response" not in data:
+            return None
+
+        results = []
+        for resp in data["response"]:
+            league_data = resp.get("league", {})
+            standings_groups = league_data.get("standings", [])
+            for group in standings_groups:
+                for entry in group:
+                    results.append({
+                        "team": {
+                            "name": entry.get("team", {}).get("name", ""),
+                            "id": entry.get("team", {}).get("id"),
+                        },
+                        "rank": entry.get("rank", 0),
+                        "points": entry.get("points", 0),
+                        "played": entry.get("all", {}).get("played", 0),
+                    })
+
+        return results if results else None
+
+    # Mapping nomi comuni -> ID API-Football (evita problemi di ricerca)
+    TEAM_ID_MAP = {
+        # Serie A
+        "inter": 505, "inter milan": 505, "internazionale": 505,
+        "milan": 489, "ac milan": 489,
+        "juventus": 496, "juve": 496,
+        "napoli": 492, "ssc napoli": 492,
+        "roma": 497, "as roma": 497,
+        "lazio": 487, "ss lazio": 487,
+        "fiorentina": 502, "acf fiorentina": 502,
+        "atalanta": 499,
+        "bologna": 500, "bologna fc": 500,
+        "torino": 503, "torino fc": 503,
+        "monza": 1579, "ac monza": 1579,
+        "genoa": 495, "genoa cfc": 495,
+        "udinese": 494,
+        "empoli": 511,
+        "lecce": 867, "us lecce": 867,
+        "cagliari": 490,
+        "verona": 504, "hellas verona": 504,
+        "como": 895, "como 1907": 895,
+        "parma": 498, "parma calcio": 498,
+        "venezia": 517, "venezia fc": 517,
+        "cremonese": 515, "us cremonese": 515,
+        # Premier League
+        "manchester city": 50, "man city": 50,
+        "manchester united": 33, "man utd": 33, "man united": 33,
+        "liverpool": 40,
+        "arsenal": 42,
+        "chelsea": 49,
+        "tottenham": 47, "spurs": 47,
+        "newcastle": 34, "newcastle united": 34,
+        "aston villa": 66,
+        "brighton": 51,
+        "west ham": 48,
+        # La Liga
+        "real madrid": 541,
+        "barcelona": 529, "barca": 529,
+        "atletico madrid": 530, "atletico": 530,
+        "sevilla": 536,
+        "real sociedad": 548,
+        "villarreal": 533,
+        "real betis": 543, "betis": 543,
+        "athletic bilbao": 531, "athletic club": 531,
+        "valencia": 532,
+        # Bundesliga
+        "bayern munich": 157, "bayern": 157, "bayern monaco": 157,
+        "borussia dortmund": 165, "dortmund": 165,
+        "rb leipzig": 173, "leipzig": 173,
+        "bayer leverkusen": 168, "leverkusen": 168,
+        # Ligue 1
+        "psg": 85, "paris saint-germain": 85, "paris sg": 85,
+        "marseille": 81, "olympique marsiglia": 81,
+        "lyon": 80, "olympique lione": 80,
+        "monaco": 91, "as monaco": 91,
+        # Portoghesi
+        "sporting cp": 228, "sporting": 228, "sporting lisbon": 228, "sporting lisbona": 228,
+        "benfica": 211, "sl benfica": 211,
+        "porto": 212, "fc porto": 212,
+        "braga": 217, "sc braga": 217,
+        # Olandesi
+        "ajax": 194,
+        "psv": 197, "psv eindhoven": 197,
+        "feyenoord": 215,
+        # Altre europee
+        "celtic": 247,
+        "rangers": 257,
+        "galatasaray": 645,
+        "fenerbahce": 611,
+        "besiktas": 549,
+    }
+
+    def search_team_id(self, team_name):
+        """
+        Cerca l'ID di una squadra su API-Football.
+        Prima controlla mapping locale, poi cerca via API con filtro paese.
+        """
+        # 1. Check mapping locale (veloce, no API call)
+        key = team_name.strip().lower()
+        if key in self.TEAM_ID_MAP:
+            team_id = self.TEAM_ID_MAP[key]
+            logger.info(f"Team '{team_name}' trovato in mapping locale: ID {team_id}")
+            return team_id
+
+        # 2. Cerca via API
+        data = self._make_request("teams", params={"search": team_name})
+        if not data or "response" not in data:
+            return None
+
+        results = data["response"]
+        if not results:
+            return None
+
+        # Preferisci squadre di paesi europei principali (non donne, non giovani)
+        preferred_countries = {"Italy", "England", "Spain", "Germany", "France",
+                               "Portugal", "Netherlands", "Belgium", "Turkey"}
+
+        for team_data in results:
+            team = team_data.get("team", {})
+            country = team_data.get("team", {}).get("country", "")
+            name = team.get("name", "")
+            # Salta squadre femminili e giovanili
+            if any(tag in name for tag in ["W", "Women", "U19", "U21", "U23", "II"]):
+                continue
+            if country in preferred_countries:
+                logger.info(f"Team '{team_name}' trovato via API: {name} (ID {team['id']}, {country})")
+                return team["id"]
+
+        # Fallback: primo risultato non-femminile
+        for team_data in results:
+            team = team_data.get("team", {})
+            name = team.get("name", "")
+            if not any(tag in name for tag in ["W", "Women", "U19", "U21", "U23"]):
+                logger.info(f"Team '{team_name}' fallback: {name} (ID {team['id']})")
+                return team["id"]
+
+        return None
+
+    def get_team_last_matches(self, team_id, last_n=5):
+        """
+        Recupera le ultime N partite finite di una squadra.
+        Usa season=2024 (free plan) e filtra partite finite.
+        """
+        # Free plan: season 2022-2024. Usiamo 2024 per dati recenti
+        data = self._make_request("fixtures", params={
+            "team": team_id,
+            "season": 2024,
+            "status": "FT",  # Solo partite finite
+        })
+
+        if not data or "response" not in data:
+            return None
+
+        fixtures = data["response"]
+        if not fixtures:
+            return None
+
+        # Ordina per data decrescente e prendi ultime N
+        fixtures.sort(key=lambda f: f.get("fixture", {}).get("date", ""), reverse=True)
+        fixtures = fixtures[:last_n]
+
+        matches = []
+        for fixture in fixtures:
+            teams = fixture.get("teams", {})
+            goals = fixture.get("goals", {})
+            fixture_info = fixture.get("fixture", {})
+
+            home_name = teams.get("home", {}).get("name", "")
+            away_name = teams.get("away", {}).get("name", "")
+            home_goals = goals.get("home", 0) or 0
+            away_goals = goals.get("away", 0) or 0
+            home_id = teams.get("home", {}).get("id")
+
+            is_home = (home_id == team_id)
+            if is_home:
+                opponent = away_name
+                gf, ga = home_goals, away_goals
+            else:
+                opponent = home_name
+                gf, ga = away_goals, home_goals
+
+            if gf > ga:
+                result = "W"
+            elif gf < ga:
+                result = "L"
+            else:
+                result = "D"
+
+            matches.append({
+                "date": fixture_info.get("date", "")[:10],
+                "opponent": opponent,
+                "result": result,
+                "goals_for": gf,
+                "goals_against": ga,
+                "score": f"{home_goals}-{away_goals}",
+                "venue": "home" if is_home else "away",
+            })
+
+        return matches if matches else None
+
+    def get_head_to_head(self, team1_id, team2_id, last_n=20):
+        """
+        Recupera scontri diretti tra due squadre (H2H).
+        Endpoint: /fixtures/headtohead?h2h={id1}-{id2}&last={n}
+        """
+        if not self.api_key:
+            return None
+
+        data = self._make_request("fixtures/headtohead", params={
+            "h2h": f"{team1_id}-{team2_id}",
+            "last": last_n,
+        })
+
+        if not data or "response" not in data:
+            return None
+
+        fixtures = data["response"]
+        if not fixtures:
+            return None
+
+        team1_wins = 0
+        team2_wins = 0
+        draws = 0
+        matches = []
+
+        # Determina i nomi dalle prime fixture
+        team1_name = ""
+        team2_name = ""
+
+        for fixture in fixtures:
+            teams = fixture.get("teams", {})
+            goals = fixture.get("goals", {})
+            fixture_info = fixture.get("fixture", {})
+            league = fixture.get("league", {})
+
+            home = teams.get("home", {})
+            away = teams.get("away", {})
+            home_goals = goals.get("home")
+            away_goals = goals.get("away")
+
+            # Salta partite senza risultato
+            if home_goals is None or away_goals is None:
+                continue
+
+            # Identifica team1 e team2
+            if home.get("id") == team1_id:
+                if not team1_name:
+                    team1_name = home.get("name", "")
+                if not team2_name:
+                    team2_name = away.get("name", "")
+            elif away.get("id") == team1_id:
+                if not team1_name:
+                    team1_name = away.get("name", "")
+                if not team2_name:
+                    team2_name = home.get("name", "")
+
+            # Determina vincitore
+            if home_goals > away_goals:
+                winner_id = home.get("id")
+            elif away_goals > home_goals:
+                winner_id = away.get("id")
+            else:
+                winner_id = None
+
+            if winner_id == team1_id:
+                team1_wins += 1
+                result = "team1"
+            elif winner_id == team2_id:
+                team2_wins += 1
+                result = "team2"
+            else:
+                draws += 1
+                result = "draw"
+
+            matches.append({
+                "date": fixture_info.get("date", "")[:10],
+                "home_team": home.get("name", ""),
+                "away_team": away.get("name", ""),
+                "home_score": home_goals,
+                "away_score": away_goals,
+                "score": f"{home_goals}-{away_goals}",
+                "result": result,
+                "competition": league.get("name", ""),
+            })
+
+        if not matches:
+            return None
+
+        return {
+            "team1_name": team1_name,
+            "team2_name": team2_name,
+            "team1_wins": team1_wins,
+            "team2_wins": team2_wins,
+            "draws": draws,
+            "total_matches": len(matches),
+            "matches": matches,
+        }
+
+
 # Singleton instance
 _apifootball_engine_instance = None
 

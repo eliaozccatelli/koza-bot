@@ -77,6 +77,17 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 API_HOST = os.getenv("API_HOST", "api.football-data.org")
 
 
+# RapidAPI (per dati forma squadre e H2H)
+
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
+
+RAPIDAPI_HOST = os.getenv("RAPIDAPI_HOST", "")
+
+# Groq Cloud (Llama 3.3 70B gratuito)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+
 
 
 
@@ -118,7 +129,7 @@ SEASON = 2024
 
 # Numero massimo di scontri diretti da considerare
 
-HEAD_TO_HEAD_MATCHES = 5
+HEAD_TO_HEAD_MATCHES = 20
 
 
 
@@ -256,4 +267,17 @@ LEGHE_PRINCIPALI_APIFOOTBALL = {
     "4": "Euro Championship",            # Europei
     "960": "Euro Qualifiers",            # Qualificazioni Europei
     "5": "UEFA Nations League",          # Nations League
+}
+
+# Mapping API-Football ID -> TheSportsDB ID (per deduplicazione competizioni)
+APIFOOTBALL_TO_SPORTSDB = {
+    "135": "4332",   # Serie A
+    "39": "4328",    # Premier League
+    "140": "4335",   # La Liga
+    "78": "4331",    # Bundesliga
+    "61": "4334",    # Ligue 1
+    "2": "4480",     # Champions League
+    "3": "4481",     # Europa League
+    "848": "5007",   # Conference League
+    "5": "4490",     # UEFA Nations League
 }

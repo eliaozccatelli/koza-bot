@@ -10,6 +10,7 @@ import requests
 from datetime import datetime, timedelta
 
 from src.utils.team_ratings import get_team_rating, get_team_form
+from src.engines.base_engine import BaseAIEngine
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ def _get_gemini_api_keys():
     return []
 
 
-class GeminiEngine:
+class GeminiEngine(BaseAIEngine):
     """Motore AI basato su Google Gemini per analisi calcistica."""
     
     def __init__(self, api_keys=None, model=DEFAULT_MODEL):
@@ -301,20 +302,52 @@ class GeminiEngine:
     # Metodi Pubblici - Analisi Partita
     # =========================
     
-    def analizza_partita(self, squadra_casa, squadra_trasferta, competizione=None, data=None):
+    def analizza_partita(self, squadra_casa, squadra_trasferta, competizione=None, data=None,
+                         forma_casa=None, forma_trasferta=None, h2h=None,
+                         rating_casa=None, rating_trasferta=None, ml_prediction=None,
+                         standings_casa=None, standings_trasferta=None):
         """
         Analizza una partita specifica usando Gemini AI.
-        Ritorna un dict con pronostico e analisi completa.
+        Accetta dati reali opzionali per arricchire il prompt.
         """
         data_str = ""
         if data:
             data_str = f" in programma il {data.strftime('%d/%m/%Y')}"
-        
-        comp_info = f" ({competizione})" if competizione else ""
-        
-        prompt = f"""Sei un esperto analista calcistico. Analizza la partita{squadra_casa} vs {squadra_trasferta}{comp_info}{data_str}.
 
-Fornisci un pronostico dettagliato con questo formato JSON ESATTO:
+        comp_info = f" ({competizione})" if competizione else ""
+
+        # Costruisci sezione dati reali per il prompt
+        dati_reali = self._build_data_context(
+            squadra_casa, squadra_trasferta,
+            forma_casa, forma_trasferta, h2h,
+            rating_casa, rating_trasferta,
+            ml_prediction=ml_prediction,
+            standings_casa=standings_casa, standings_trasferta=standings_trasferta
+        )
+
+        prompt = f"""Sei un esperto tipster calcistico professionista. Analizza la partita {squadra_casa} vs {squadra_trasferta}{comp_info}{data_str}.
+
+{dati_reali}
+
+Basandoti sui DATI REALI forniti sopra (se presenti), fornisci un pronostico dettagliato.
+Se i dati sono segnalati come "approssimativi", usali come indicazione ma integra con la tua conoscenza.
+Se e' presente una PREDIZIONE ML, confrontala con la tua analisi. Se le probabilita' ML differiscono significativamente, adatta il tuo pronostico o motiva perche' la ritieni errata.
+
+COERENZA OBBLIGATORIA:
+- Le probabilita' 1/X/2 DEVONO essere coerenti col risultato previsto (se prevedi vittoria casa, prob_1 > prob_2)
+- X non puo' essere sotto 10% (nessuna partita reale ha pareggio sotto 10%)
+- Se prevedi 3+ gol totali, over25 DEVE essere almeno 60%
+- La confidence deve riflettere quanto sei sicuro: partita equilibrata = max 55%
+
+IMPORTANTE per le scommesse consigliate:
+- Scegli le 4-5 scommesse PIU' PROBABILI e FATTIBILI basandoti sui dati
+- VARIA i tipi di scommessa! Non dare sempre 1X2 + Over 2.5
+- Scegli tra: 1, X, 2, 1X, X2, 12, Over/Under (1.5, 2.5, 3.5), Gol/NoGol, Multigol (0-1, 1-2, 2-3, 2-4, 3-5), Handicap (-1, +1), Combo (es. "1 + Over 1.5"), Parziale/Finale (1/1, X/2), Primo Tempo (1 PT, Over 0.5 PT)
+- Per ogni scommessa indica la probabilita' stimata di vincita (0-100)
+- Ordina dalla piu' probabile alla meno probabile
+- Motiva brevemente ogni scelta
+
+Rispondi con questo formato JSON ESATTO:
 {{
   "pronostico": {{
     "risultato_esatto": "2-1",
@@ -322,7 +355,7 @@ Fornisci un pronostico dettagliato con questo formato JSON ESATTO:
     "over_under": "Over 2.5",
     "gol_nogol": "Gol",
     "confidence": 75,
-    "descrizione": "L'Inter ha un attacco in forma..."
+    "descrizione": "Breve motivazione del pronostico..."
   }},
   "probabilita": {{
     "1": 55,
@@ -345,195 +378,327 @@ Fornisci un pronostico dettagliato con questo formato JSON ESATTO:
     ]
   }},
   "scommesse_consigliate": [
-    {{"tipo": "1", "quota": "1.75", "descrizione": "Vittoria casa"}},
-    {{"tipo": "Over 2.5", "quota": "1.90", "descrizione": "Più di 2 gol"}},
-    {{"tipo": "Gol", "quota": "1.80", "descrizione": "Entrambe segnano"}}
+    {{"tipo": "1 + Over 1.5", "probabilita": 62, "descrizione": "Casa vince e almeno 2 gol, forma ottima"}},
+    {{"tipo": "Multigol 2-4", "probabilita": 58, "descrizione": "Range gol piu' probabile basato sulle medie"}},
+    {{"tipo": "Gol", "probabilita": 55, "descrizione": "Entrambe in gol nelle ultime 4 su 5"}},
+    {{"tipo": "Over 2.5", "probabilita": 52, "descrizione": "Media gol alta per entrambe"}}
   ]
 }}
 
-Confidence deve essere 0-100.
-Probabilità devono essere numeri interi 0-100.
-Fornisci analisi realistica basata sulla forma attuale delle squadre.
-Rispondi SOLO con il JSON valido, nessun testo aggiuntivo."""
+Confidence 0-100. Probabilita' numeri interi 0-100. Analisi REALISTICA.
+Rispondi SOLO con il JSON valido."""
 
-        response = self._call_gemini(prompt, temperature=0.7, max_tokens=4096)
-        
+        response = self._call_gemini(prompt, temperature=0.5, max_tokens=4096)
+
         if not response:
             logger.error("Gemini non ha risposto per l'analisi partita")
             return self._default_analysis(squadra_casa, squadra_trasferta)
-            
+
         data_parsed = self._parse_json_response(response)
-        
+
         if data_parsed:
             logger.info(f"Analisi Gemini completata per {squadra_casa} vs {squadra_trasferta}")
-            # Sovrascrivi scommesse con quelle intelligenti basate sul risultato
-            risultato = data_parsed.get("pronostico", {}).get("risultato_esatto", "1-1")
-            data_parsed["scommesse_consigliate"] = self._generate_smart_scommesse(
-                risultato, squadra_casa, squadra_trasferta
-            )
+            # Valida coerenza della risposta Gemini
+            data_parsed = self._validate_gemini_response(data_parsed)
+            # Usa le scommesse di Gemini direttamente. Fallback solo se mancanti/vuote.
+            scommesse = data_parsed.get("scommesse_consigliate", [])
+            if not scommesse or len(scommesse) == 0:
+                risultato = data_parsed.get("pronostico", {}).get("risultato_esatto", "1-1")
+                prob = data_parsed.get("probabilita", {})
+                conf = data_parsed.get("pronostico", {}).get("confidence", 50)
+                data_parsed["scommesse_consigliate"] = self._generate_smart_scommesse(
+                    risultato, squadra_casa, squadra_trasferta,
+                    probabilita=prob, confidence=conf
+                )
             return data_parsed
         else:
             logger.warning("Risposta Gemini non parsabile, uso default")
             return self._default_analysis(squadra_casa, squadra_trasferta)
-    
-    def _generate_smart_scommesse(self, risultato, casa, trasferta):
+
+    def _validate_gemini_response(self, data):
         """
-        Genera scommesse intelligenti basate sul risultato esatto previsto.
-        Esempio: se previsto 3-0 → Over 2.5, Multigol 2-4, 1
+        Valida e corregge incoerenze nella risposta Gemini.
+        Es: pronostico 4-0 ma prob casa 48% → corregge.
         """
         try:
-            # Parse risultato esatto (formato "2-1")
+            pronostico = data.get("pronostico", {})
+            prob = data.get("probabilita", {})
+            vincitore = pronostico.get("vincitore", "")
+            risultato = pronostico.get("risultato_esatto", "1-1")
+
+            prob_1 = prob.get("1", 33)
+            prob_x = prob.get("X", 33)
+            prob_2 = prob.get("2", 33)
+
+            # 1. X mai sotto 10% (irrealistico)
+            if prob_x < 10:
+                deficit = 10 - prob_x
+                prob_x = 10
+                # Distribuisci il deficit proporzionalmente
+                if prob_1 + prob_2 > 0:
+                    ratio = prob_1 / (prob_1 + prob_2)
+                    prob_1 -= deficit * ratio
+                    prob_2 -= deficit * (1 - ratio)
+                logger.info(f"Validazione: X corretto da {prob.get('X')}% a 10%")
+
+            # 2. Probabilità coerenti col vincitore
+            if vincitore == "casa" and prob_1 < prob_2:
+                prob_1, prob_2 = prob_2, prob_1
+                logger.info("Validazione: swap prob 1/2 per coerenza col vincitore casa")
+            elif vincitore == "trasferta" and prob_2 < prob_1:
+                prob_1, prob_2 = prob_2, prob_1
+                logger.info("Validazione: swap prob 1/2 per coerenza col vincitore trasferta")
+
+            # Normalizza a 100
+            total = prob_1 + prob_x + prob_2
+            if total > 0 and abs(total - 100) > 1:
+                prob_1 = round(prob_1 * 100 / total, 1)
+                prob_x = round(prob_x * 100 / total, 1)
+                prob_2 = round(100 - prob_1 - prob_x, 1)
+
+            prob["1"] = round(prob_1, 1)
+            prob["X"] = round(prob_x, 1)
+            prob["2"] = round(prob_2, 1)
+
+            # 3. Over 2.5 coerente coi gol previsti
+            try:
+                gol_parts = risultato.split('-')
+                totale_gol = int(gol_parts[0]) + int(gol_parts[1])
+                over25 = prob.get("over25", 50)
+
+                if totale_gol >= 3 and over25 < 55:
+                    prob["over25"] = max(60, over25 + 20)
+                    logger.info(f"Validazione: over25 corretto da {over25}% a {prob['over25']}% ({totale_gol} gol previsti)")
+                elif totale_gol <= 2 and over25 > 55:
+                    prob["over25"] = min(45, over25 - 15)
+                    logger.info(f"Validazione: over25 corretto da {over25}% a {prob['over25']}% ({totale_gol} gol previsti)")
+            except (ValueError, IndexError):
+                pass
+
+            # 4. Confidence coerente
+            confidence = pronostico.get("confidence", 50)
+            prob_vincitore = prob_1 if vincitore == "casa" else (prob_2 if vincitore == "trasferta" else prob_x)
+            diff_12 = abs(prob_1 - prob_2)
+
+            if prob_vincitore < 40 and confidence > 55:
+                pronostico["confidence"] = min(confidence, 55)
+                logger.info(f"Validazione: confidence abbassata da {confidence} a {pronostico['confidence']} (prob vincitore bassa)")
+            elif diff_12 < 10 and confidence > 50:
+                pronostico["confidence"] = min(confidence, 50)
+                logger.info(f"Validazione: confidence abbassata da {confidence} a {pronostico['confidence']} (partita equilibrata)")
+
+            data["pronostico"] = pronostico
+            data["probabilita"] = prob
+
+        except Exception as e:
+            logger.warning(f"Errore validazione risposta: {e}")
+
+        return data
+
+    def _build_data_context(self, casa, trasferta, forma_casa, forma_trasferta, h2h,
+                            rating_casa, rating_trasferta, ml_prediction=None):
+        """Costruisce la sezione DATI REALI per il prompt Gemini."""
+        lines = ["DATI REALI DISPONIBILI:"]
+
+        # Forma casa
+        if forma_casa:
+            source = forma_casa.get('source', 'static')
+            source_tags = {
+                'telegram_live': 'dati live gruppo',
+                'training_data': 'dati reali stagione',
+                'apifootball': 'dati API',
+                'rapidapi': 'dati live',
+            }
+            tag = source_tags.get(source, 'approssimativo')
+            form_str = forma_casa.get('form', '?')
+            w = forma_casa.get('wins', 0)
+            d = forma_casa.get('draws', 0)
+            l = forma_casa.get('losses', 0)
+            gf = forma_casa.get('goals_for', 0)
+            ga = forma_casa.get('goals_against', 0)
+            line = f"- {casa}: Forma ultime 5 = {form_str} ({w}V-{d}P-{l}S"
+            if gf or ga:
+                line += f", {gf} gol fatti, {ga} subiti"
+            line += f") [{tag}]"
+            lines.append(line)
+
+        # Forma trasferta
+        if forma_trasferta:
+            source = forma_trasferta.get('source', 'static')
+            source_tags = {
+                'telegram_live': 'dati live gruppo',
+                'training_data': 'dati reali stagione',
+                'apifootball': 'dati API',
+                'rapidapi': 'dati live',
+            }
+            tag = source_tags.get(source, 'approssimativo')
+            form_str = forma_trasferta.get('form', '?')
+            w = forma_trasferta.get('wins', 0)
+            d = forma_trasferta.get('draws', 0)
+            l = forma_trasferta.get('losses', 0)
+            gf = forma_trasferta.get('goals_for', 0)
+            ga = forma_trasferta.get('goals_against', 0)
+            line = f"- {trasferta}: Forma ultime 5 = {form_str} ({w}V-{d}P-{l}S"
+            if gf or ga:
+                line += f", {gf} gol fatti, {ga} subiti"
+            line += f") [{tag}]"
+            lines.append(line)
+
+        # Rating
+        if rating_casa and rating_trasferta:
+            lines.append(f"- Forza stimata: {casa} {rating_casa}/100, {trasferta} {rating_trasferta}/100")
+
+        # H2H
+        if h2h:
+            total = h2h.get('total_matches', 0)
+            if total > 0:
+                w1 = h2h.get('team1_wins', 0)
+                w2 = h2h.get('team2_wins', 0)
+                dr = h2h.get('draws', 0)
+                lines.append(f"- Scontri diretti (ultimi {total}): {casa} {w1}V, {dr}P, {trasferta} {w2}V")
+                matches = h2h.get('matches', [])
+                for m in matches[:3]:
+                    lines.append(f"  - {m.get('date', '?')}: {m.get('score', '?')} ({m.get('result', '?')})")
+
+        # Predizione ML
+        if ml_prediction:
+            lines.append("")
+            lines.append("PREDIZIONE ML (modello RandomForest, basato su dati storici):")
+            lines.append(f"- 1: {ml_prediction.get('1', '?')}%, X: {ml_prediction.get('X', '?')}%, 2: {ml_prediction.get('2', '?')}%")
+            lines.append(f"- Predizione: {ml_prediction.get('prediction', '?')} (confidence: {ml_prediction.get('confidence', '?')}%)")
+            lines.append("- Confronta con la tua analisi. Se discordi, motiva la differenza.")
+
+        if len(lines) == 1:
+            lines.append("- Nessun dato specifico disponibile. Usa la tua conoscenza aggiornata.")
+
+        return "\n".join(lines)
+    
+    def _generate_smart_scommesse(self, risultato, casa, trasferta,
+                                   probabilita=None, confidence=None):
+        """
+        Genera scommesse intelligenti basate su risultato, probabilità e confidence.
+        Confidence bassa → scommesse safe. Confidence alta → scommesse aggressive.
+        """
+        try:
             gol_casa, gol_trasf = map(int, risultato.split('-'))
             totale_gol = gol_casa + gol_trasf
-            
+
+            prob_1 = probabilita.get("1", 33) if probabilita else 33
+            prob_x = probabilita.get("X", 33) if probabilita else 33
+            prob_2 = probabilita.get("2", 33) if probabilita else 33
+            over25 = probabilita.get("over25", 50) if probabilita else 50
+            prob_gol = probabilita.get("gol", 50) if probabilita else 50
+            conf = confidence if confidence else 50
+
+            safe = conf < 55  # Partita incerta → scommesse conservative
+
             scommesse = []
-            
-            # 1. Esito principale basato sul risultato
+
+            # 1. Esito basato su probabilità (non solo risultato)
             if gol_casa > gol_trasf:
                 margin = gol_casa - gol_trasf
-                if margin >= 2:
+                if prob_1 >= 60 and not safe:
                     scommesse.append({
-                        "tipo": "1",
-                        "descrizione": f"Vittoria {casa} netta (previsto {risultato})"
+                        "tipo": "1", "probabilita": int(prob_1),
+                        "descrizione": f"Vittoria {casa} ({prob_1:.0f}% prob)"
                     })
+                    if margin >= 2 and conf >= 65:
+                        scommesse.append({
+                            "tipo": "1 -1.5", "probabilita": int(prob_1 * 0.6),
+                            "descrizione": f"{casa} vince con margine"
+                        })
+                elif prob_1 >= 45:
                     scommesse.append({
-                        "tipo": "1 -1.5",
-                        "descrizione": f"{casa} vince con almeno 2 gol di margine"
+                        "tipo": "1X", "probabilita": int(prob_1 + prob_x),
+                        "descrizione": f"{casa} non perde ({prob_1 + prob_x:.0f}% prob)"
                     })
                 else:
                     scommesse.append({
-                        "tipo": "1",
-                        "descrizione": f"Vittoria {casa} (previsto {risultato})"
-                    })
-                    scommesse.append({
-                        "tipo": "1X",
-                        "descrizione": f"{casa} non perde"
+                        "tipo": "1X", "probabilita": int(prob_1 + prob_x),
+                        "descrizione": f"Partita equilibrata, {casa} non perde"
                     })
             elif gol_trasf > gol_casa:
                 margin = gol_trasf - gol_casa
-                if margin >= 2:
+                if prob_2 >= 60 and not safe:
                     scommesse.append({
-                        "tipo": "2",
-                        "descrizione": f"Vittoria {trasferta} netta (previsto {risultato})"
+                        "tipo": "2", "probabilita": int(prob_2),
+                        "descrizione": f"Vittoria {trasferta} ({prob_2:.0f}% prob)"
+                    })
+                    if margin >= 2 and conf >= 65:
+                        scommesse.append({
+                            "tipo": "2 -1.5", "probabilita": int(prob_2 * 0.6),
+                            "descrizione": f"{trasferta} vince con margine"
+                        })
+                elif prob_2 >= 45:
+                    scommesse.append({
+                        "tipo": "X2", "probabilita": int(prob_2 + prob_x),
+                        "descrizione": f"{trasferta} non perde ({prob_2 + prob_x:.0f}% prob)"
                     })
                 else:
                     scommesse.append({
-                        "tipo": "2",
-                        "descrizione": f"Vittoria {trasferta} (previsto {risultato})"
+                        "tipo": "X2", "probabilita": int(prob_2 + prob_x),
+                        "descrizione": f"Partita equilibrata, {trasferta} non perde"
                     })
             else:
-                # Pareggio
                 scommesse.append({
-                    "tipo": "X",
-                    "descrizione": f"Pareggio (previsto {risultato})"
+                    "tipo": "X", "probabilita": int(prob_x),
+                    "descrizione": f"Pareggio previsto ({risultato})"
                 })
+
+            # 2. Over/Under basato su probabilità over25 (non solo totale gol)
+            if over25 >= 60:
                 scommesse.append({
-                    "tipo": "Under 2.5",
-                    "descrizione": "Partita con pochi gol"
+                    "tipo": "Over 2.5", "probabilita": int(over25),
+                    "descrizione": f"Almeno 3 gol ({over25:.0f}% prob)"
                 })
-            
-            # 2. Over/Under e Multigol basati sul totale gol
-            if totale_gol >= 3:
+                if totale_gol >= 4 and conf >= 60:
+                    scommesse.append({
+                        "tipo": "Over 3.5", "probabilita": int(over25 * 0.65),
+                        "descrizione": "Partita aperta"
+                    })
+            elif over25 <= 40:
                 scommesse.append({
-                    "tipo": "Over 2.5",
-                    "descrizione": f"Partita aperta ({totale_gol} gol previsti)"
-                })
-                
-                # Over progressivi per molti gol
-                if totale_gol >= 4:
-                    scommesse.append({
-                        "tipo": "Over 3.5",
-                        "descrizione": "Molti gol attesi"
-                    })
-                if totale_gol >= 6:
-                    scommesse.append({
-                        "tipo": "Over 5.5",
-                        "descrizione": f"Partita goal-goal ({totale_gol} gol!)"
-                    })
-                
-                # Multigol adattivo in base al totale
-                if totale_gol <= 4:
-                    scommesse.append({
-                        "tipo": "Multigol 2-4",
-                        "descrizione": "Range gol più probabile"
-                    })
-                elif totale_gol <= 6:
-                    scommesse.append({
-                        "tipo": "Multigol 3-5",
-                        "descrizione": "Partita con gol"
-                    })
-                else:  # 7+ gol (es. 4-3, 5-2)
-                    scommesse.append({
-                        "tipo": "Multigol 4-6",
-                        "descrizione": f"Partita molto aperta ({totale_gol} gol!)"
-                    })
-                    scommesse.append({
-                        "tipo": "Over 4.5",
-                        "descrizione": "Almeno 5 gol previsti"
-                    })
-            elif totale_gol <= 2:
-                scommesse.append({
-                    "tipo": "Under 2.5",
-                    "descrizione": f"Partita chiusa ({totale_gol} gol previsti)"
+                    "tipo": "Under 2.5", "probabilita": int(100 - over25),
+                    "descrizione": f"Pochi gol attesi ({100 - over25:.0f}% prob)"
                 })
                 if totale_gol <= 1:
                     scommesse.append({
-                        "tipo": "Under 1.5",
-                        "descrizione": "Massimo 1 gol atteso"
+                        "tipo": "Under 1.5", "probabilita": int((100 - over25) * 0.65),
+                        "descrizione": "Partita chiusa"
                     })
-                scommesse.append({
-                    "tipo": "Multigol 0-2",
-                    "descrizione": "Pochi gol previsti"
-                })
             else:
-                # Caso limite (2.5 gol)
+                # Over25 incerto (40-60%): multigol come scommessa safe
+                if totale_gol <= 3:
+                    scommesse.append({
+                        "tipo": "Multigol 1-3", "probabilita": 60,
+                        "descrizione": "Range gol più probabile"
+                    })
+                else:
+                    scommesse.append({
+                        "tipo": "Multigol 2-4", "probabilita": 55,
+                        "descrizione": "Range gol più probabile"
+                    })
+
+            # 3. Gol/No Gol
+            if prob_gol >= 60:
                 scommesse.append({
-                    "tipo": "Over 1.5",
-                    "descrizione": "Almeno 2 gol"
+                    "tipo": "Gol", "probabilita": int(prob_gol),
+                    "descrizione": f"Entrambe segnano ({prob_gol:.0f}% prob)"
                 })
-            
-            # 3. Gol/No Gol basato su chi segna
-            if gol_casa > 0 and gol_trasf > 0:
+            elif prob_gol <= 40:
                 scommesse.append({
-                    "tipo": "Gol",
-                    "descrizione": f"Entrambe segnano (risultato previsto {risultato})"
+                    "tipo": "No Gol", "probabilita": int(100 - prob_gol),
+                    "descrizione": f"Almeno una non segna ({100 - prob_gol:.0f}% prob)"
                 })
-            elif gol_casa > 0 and gol_trasf == 0:
-                scommesse.append({
-                    "tipo": f"No Gol {trasferta}",
-                    "descrizione": f"{trasferta} non segna"
-                })
-                scommesse.append({
-                    "tipo": f"Gol {casa}",
-                    "descrizione": f"{casa} segna almeno {gol_casa} gol"
-                })
-            elif gol_trasf > 0 and gol_casa == 0:
-                scommesse.append({
-                    "tipo": f"No Gol {casa}",
-                    "descrizione": f"{casa} non segna"
-                })
-                scommesse.append({
-                    "tipo": f"Gol {trasferta}",
-                    "descrizione": f"{trasferta} segna almeno {gol_trasf} gol"
-                })
-            else:
-                # 0-0
-                scommesse.append({
-                    "tipo": "No Gol",
-                    "descrizione": "Nessuna segna (risultato previsto 0-0)"
-                })
-                scommesse.append({
-                    "tipo": "Under 0.5",
-                    "descrizione": "Partita senza gol"
-                })
-            
-            return scommesse[:4]  # Max 4 scommesse
-            
+
+            # Ordina per probabilità decrescente
+            scommesse.sort(key=lambda x: x.get("probabilita", 0), reverse=True)
+            return scommesse[:4]
+
         except (ValueError, IndexError):
-            # Fallback se parsing fallisce
             return [
-                {"tipo": "1X2", "descrizione": "Esito finale"},
-                {"tipo": "Over/Under 2.5", "descrizione": "Totale gol"}
+                {"tipo": "1X2", "probabilita": 50, "descrizione": "Esito finale"},
+                {"tipo": "Over/Under 2.5", "probabilita": 50, "descrizione": "Totale gol"}
             ]
     
     def _default_analysis(self, casa, trasferta):
@@ -680,7 +845,12 @@ Rispondi SOLO con il JSON valido, nessun testo aggiuntivo."""
                 "assenti_trasferta": [],
                 "ultimi_scontri": []
             },
-            "scommesse_consigliate": self._generate_smart_scommesse(risultato, casa, trasferta)
+            "scommesse_consigliate": self._generate_smart_scommesse(
+                risultato, casa, trasferta,
+                probabilita={"1": prob_1, "X": prob_x, "2": prob_2,
+                              "over25": over25, "gol": gol},
+                confidence=confidence
+            )
         }
     
     def get_info_squadra(self, nome_squadra):

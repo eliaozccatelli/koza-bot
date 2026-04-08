@@ -40,21 +40,7 @@ stats_cache.json
 logs/
 debug.log
 
-# � Dati Generati (non sorgente)
-*.csv
-parsed_matches.csv
-
-# 🗑️ File Spazzatura
-*Documento di testo.txt
-*Nuovo*.txt
-
-# 🐍 Virtual Environment
-.venv/
-venv/
-env/
-ENV/
-
-# �🔧 IDE
+# 🔧 IDE
 .vscode/
 .idea/
 *.swp

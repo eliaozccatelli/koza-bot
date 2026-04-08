@@ -35,66 +35,162 @@ class MLBridge:
             return False
     
     def load_historical_data(self):
-        """Carica dati storici per calcolare feature."""
+        """Carica dati storici per calcolare feature (tutti i CSV disponibili)."""
         try:
-            data_files = [
-                'data/serie_a_2023.csv',
-                'data/serie_a_2024.csv'
-            ]
-            
+            import glob as glob_mod
+
             dfs = []
-            for f in data_files:
-                if os.path.exists(f):
-                    dfs.append(pd.read_csv(f))
-            
+            common_cols = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR',
+                           'B365H', 'B365D', 'B365A']
+
+            # Carica tutti i serie_a_YYYY.csv disponibili
+            for f in sorted(glob_mod.glob('data/serie_a_*.csv')):
+                try:
+                    df = pd.read_csv(f, encoding='utf-8-sig')
+                    if 'HomeTeam' in df.columns and 'FTR' in df.columns:
+                        dfs.append(df)
+                        logger.info(f"📊 Caricato {f}: {len(df)} partite")
+                except Exception as e:
+                    logger.warning(f"Errore lettura {f}: {e}")
+
+            # Carica parsed_matches.csv (dati live da Telegram)
+            if os.path.exists('parsed_matches.csv'):
+                try:
+                    df_live = pd.read_csv('parsed_matches.csv')
+                    if 'HomeTeam' in df_live.columns and 'FTR' in df_live.columns:
+                        # Filtra righe corrotte
+                        df_live = df_live[
+                            df_live['HomeTeam'].astype(str).str.len().between(2, 40) &
+                            df_live['AwayTeam'].astype(str).str.len().between(2, 40) &
+                            ~df_live['HomeTeam'].astype(str).str.contains('\n', na=False) &
+                            ~df_live['AwayTeam'].astype(str).str.contains('\n', na=False)
+                        ]
+                        if len(df_live) > 0:
+                            dfs.append(df_live)
+                            logger.info(f"📊 Caricato parsed_matches.csv: {len(df_live)} partite")
+                except Exception as e:
+                    logger.warning(f"Errore lettura parsed_matches.csv: {e}")
+
             if dfs:
-                self.historical_data = pd.concat(dfs, ignore_index=True)
-                logger.info(f"📊 Dati storici caricati: {len(self.historical_data)} partite")
+                # Usa solo colonne comuni a tutti i DataFrame
+                all_cols = set(dfs[0].columns)
+                for df in dfs[1:]:
+                    all_cols &= set(df.columns)
+                # Assicura almeno le colonne minime
+                min_cols = {'Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR'}
+                if min_cols.issubset(all_cols):
+                    self.historical_data = pd.concat(
+                        [df[list(all_cols)] for df in dfs], ignore_index=True
+                    )
+                else:
+                    # Fallback: usa solo colonne minime
+                    self.historical_data = pd.concat(
+                        [df[list(min_cols & set(df.columns))] for df in dfs], ignore_index=True
+                    )
+                logger.info(f"📊 Dati storici totali: {len(self.historical_data)} partite")
                 return True
-            
+
         except Exception as e:
             logger.error(f"Errore caricamento dati: {e}")
-        
+
         return False
     
     def predict_match(self, home_team, away_team, league='Serie A'):
         """
         Predice risultato partita con ML.
-        
-        Args:
-            home_team: Nome squadra casa
-            away_team: Nome squadra trasferta
-            league: Campionato
-        
-        Returns:
-            dict con predizione ML o None se errore
+        Integra la predizione base con i rating aggiornati dalla classifica reale.
         """
         if not self.predictor or not self.predictor.is_trained:
             logger.warning("ML non disponibile")
             return None
-        
+
         if self.historical_data is None:
             self.load_historical_data()
-        
+
         try:
+            # Verifica copertura: le squadre sono nei dati storici?
+            home_known = False
+            away_known = False
+            if self.historical_data is not None:
+                all_teams = set(self.historical_data['HomeTeam'].unique()) | set(self.historical_data['AwayTeam'].unique())
+                home_known = home_team in all_teams
+                away_known = away_team in all_teams
+
+            if not home_known and not away_known:
+                logger.info(f"ML skip: ne' {home_team} ne' {away_team} presenti nei dati storici")
+                return None
+
             # Crea DataFrame partita
             match_df = pd.DataFrame([{
                 'Date': datetime.now().strftime('%Y-%m-%d'),
                 'HomeTeam': home_team,
                 'AwayTeam': away_team
             }])
-            
-            # Predizione
+
+            # Predizione base ML
             result = self.predictor.predict(match_df, self.historical_data)
-            
+
+            prob_1 = result['probabilities']['1']
+            prob_x = result['probabilities']['X']
+            prob_2 = result['probabilities']['2']
+
+            # Peso ML dinamico in base alla copertura dati
+            if home_known and away_known:
+                ml_weight = 0.35  # entrambe note: ML piu' affidabile
+            else:
+                ml_weight = 0.10  # solo una nota: ML poco affidabile
+                logger.info(f"ML peso ridotto (10%): solo {'casa' if home_known else 'trasferta'} nei dati")
+            rating_weight = 1.0 - ml_weight
+
+            # Correggi con rating attuali dalla classifica reale
+            from src.utils.team_ratings import get_team_rating
+            rating_home = get_team_rating(home_team)
+            rating_away = get_team_rating(away_team)
+            diff = rating_home - rating_away  # positivo = casa piu' forte
+
+            rating_prob_1 = 0.33 + (diff / 100.0)
+            rating_prob_2 = 0.33 - (diff / 100.0)
+            rating_prob_x = 0.34 - abs(diff / 100.0) * 0.3
+            # Bonus fattore casa (+5%)
+            rating_prob_1 += 0.05
+            rating_prob_2 -= 0.02
+            rating_prob_x -= 0.03
+            # Normalizza rating probs
+            rt = rating_prob_1 + rating_prob_x + rating_prob_2
+            rating_prob_1, rating_prob_x, rating_prob_2 = rating_prob_1/rt, rating_prob_x/rt, rating_prob_2/rt
+
+            # Blend dinamico ML / classifica attuale
+            prob_1 = prob_1 * ml_weight + rating_prob_1 * rating_weight
+            prob_x = prob_x * ml_weight + rating_prob_x * rating_weight
+            prob_2 = prob_2 * ml_weight + rating_prob_2 * rating_weight
+
+            # Normalizza a 1.0
+            total = prob_1 + prob_x + prob_2
+            prob_1 = max(0.05, prob_1 / total)
+            prob_x = max(0.10, prob_x / total)
+            prob_2 = max(0.05, prob_2 / total)
+            total = prob_1 + prob_x + prob_2
+            prob_1, prob_x, prob_2 = prob_1/total, prob_x/total, prob_2/total
+
+            # Determina predizione
+            if prob_1 > prob_2 and prob_1 > prob_x:
+                prediction = '1'
+                confidence = prob_1
+            elif prob_2 > prob_1 and prob_2 > prob_x:
+                prediction = '2'
+                confidence = prob_2
+            else:
+                prediction = 'X'
+                confidence = prob_x
+
             return {
-                '1': round(result['probabilities']['1'] * 100, 1),
-                'X': round(result['probabilities']['X'] * 100, 1),
-                '2': round(result['probabilities']['2'] * 100, 1),
-                'prediction': result['prediction'],
-                'confidence': round(result['confidence'] * 100, 1)
+                '1': round(prob_1 * 100, 1),
+                'X': round(prob_x * 100, 1),
+                '2': round(prob_2 * 100, 1),
+                'prediction': prediction,
+                'confidence': round(confidence * 100, 1)
             }
-            
+
         except Exception as e:
             logger.error(f"Errore predizione ML: {e}")
             return None
