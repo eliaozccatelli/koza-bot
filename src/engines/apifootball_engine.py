@@ -426,7 +426,7 @@ class APIFootballEngine:
 
             combined = (score_home + score_away) / 2
 
-            if combined > best_score and combined >= 60:
+            if combined > best_score and combined >= 80:
                 best_score = combined
                 best_match = fixture
 
@@ -617,10 +617,13 @@ class APIFootballEngine:
         Recupera le ultime N partite finite di una squadra.
         Usa season=2024 (free plan) e filtra partite finite.
         """
-        # Free plan: season 2022-2024. Usiamo 2024 per dati recenti
+        # Calcola la stagione attuale (inizia indicativamente ad agosto)
+        current_year = datetime.now().year
+        season = current_year if datetime.now().month >= 8 else current_year - 1
+
         data = self._make_request("fixtures", params={
             "team": team_id,
-            "season": 2024,
+            "season": season,
             "status": "FT",  # Solo partite finite
         })
 

@@ -2,7 +2,7 @@
 Team Form Bridge - Recupera forma squadre da multiple fonti.
 Priorità: 1. parsed_matches.csv (dati live dal gruppo Telegram)
            1.5. data/*.csv (dati storici reali da football-data.co.uk)
-           2. API-Football (stagione 2024/25 - piano gratuito)
+           2. API-Football (piano gratuito)
            3. Dati statici (fallback)
 """
 
@@ -28,9 +28,9 @@ TRAINING_DATA_DIR = 'data'
 
 
 def _find_team_in_parsed(team_name, csv_team):
-    """Verifica se un nome squadra nel CSV corrisponde al team cercato."""
-    t1 = team_name.strip().lower()
-    t2 = csv_team.strip().lower()
+    """Verifica se un nome squadra nel CSV corrisponde al team cercato (usando la normalizzazione KOZA)."""
+    t1 = _resolve_alias(team_name).strip().lower()
+    t2 = _resolve_alias(csv_team).strip().lower()
     if t1 == t2:
         return True
     if t1 in t2 or t2 in t1:
@@ -40,10 +40,11 @@ def _find_team_in_parsed(team_name, csv_team):
     return False
 
 
-def get_form_from_parsed_matches(team_name, last_n=5):
+def get_form_from_parsed_matches(team_name, last_n=5, competition=None):
     """
     Cerca le ultime N partite di una squadra in parsed_matches.csv.
     Questi sono dati REALI della stagione corrente, inseriti dall'utente.
+    Se competition è specificata, filtra per quella competizione (fallback: tutte).
 
     Returns:
         dict con forma o None se non trovata
@@ -96,6 +97,8 @@ def get_form_from_parsed_matches(team_name, last_n=5):
                 else:
                     result = 'D'
 
+                match_competition = row.get('Competition', '').strip()
+
                 matches.append({
                     'date': date,
                     'opponent': opponent,
@@ -104,16 +107,25 @@ def get_form_from_parsed_matches(team_name, last_n=5):
                     'goals_against': ga,
                     'score': f"{fthg}-{ftag}",
                     'venue': venue,
+                    'competition': match_competition,
                 })
 
         if not matches:
             return None
 
-        # Ordina per data decrescente e prendi ultime N
+        # Ordina per data decrescente
         matches.sort(key=lambda m: m.get('date', ''), reverse=True)
+
+        # Filtra per competizione se specificata (fallback: tutte le partite)
+        if competition:
+            comp_lower = competition.lower()
+            filtered = [m for m in matches if m.get('competition', '').lower() == comp_lower]
+            if len(filtered) >= 2:
+                matches = filtered
+
         matches = matches[:last_n]
 
-        if len(matches) < 2:
+        if not matches:
             return None
 
         form_str = "".join(m['result'] for m in matches)
@@ -141,10 +153,11 @@ def get_form_from_parsed_matches(team_name, last_n=5):
         return None
 
 
-def get_form_from_training_data(team_name, last_n=5):
+def get_form_from_training_data(team_name, last_n=5, competition=None):
     """
     Cerca le ultime N partite di una squadra nei CSV di training (data/*.csv).
     Questi sono dati REALI completi della stagione corrente (football-data.co.uk).
+    Se competition è specificata, filtra per quella competizione (fallback: tutte).
 
     I file seguono il formato: Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,...
     Date è in formato DD/MM/YYYY.
@@ -242,11 +255,19 @@ def get_form_from_training_data(team_name, last_n=5):
     if not all_matches:
         return None
 
-    # Ordina per data decrescente e prendi ultime N
+    # Ordina per data decrescente
     all_matches.sort(key=lambda m: m.get('date', ''), reverse=True)
+
+    # Filtra per competizione se specificata (fallback: tutte le partite)
+    if competition:
+        comp_lower = competition.lower()
+        filtered = [m for m in all_matches if m.get('league', '').lower() == comp_lower]
+        if len(filtered) >= 2:
+            all_matches = filtered
+
     matches = all_matches[:last_n]
 
-    if len(matches) < 2:
+    if not matches:
         return None
 
     form_str = "".join(m['result'] for m in matches)
@@ -322,7 +343,7 @@ def get_team_form(team_name: str, use_real_data: bool = True) -> str:
     return details.get('form', get_static_team_form(team_name))
 
 
-def get_team_form_with_details(team_name: str, use_real_data: bool = True) -> Dict[str, Any]:
+def get_team_form_with_details(team_name: str, use_real_data: bool = True, competition: str = None) -> Dict[str, Any]:
     """
     Recupera forma dettagliata.
     Priorità: 1. parsed_matches.csv
@@ -347,7 +368,7 @@ def get_team_form_with_details(team_name: str, use_real_data: bool = True) -> Di
         return result
 
     # Check cache
-    cache_key = f"form_{team_name.lower().strip()}"
+    cache_key = f"form_{team_name.lower().strip()}_{(competition or '').lower()}"
     if cache_key in _form_cache:
         cached_time, cached_data = _form_cache[cache_key]
         if (datetime.now() - cached_time).seconds < _cache_ttl:
@@ -357,18 +378,18 @@ def get_team_form_with_details(team_name: str, use_real_data: bool = True) -> Di
     resolved_name = _resolve_alias(team_name)
 
     # PRIORITÀ 1: parsed_matches.csv (dati live stagione corrente)
-    live_form = get_form_from_parsed_matches(team_name) or get_form_from_parsed_matches(resolved_name)
+    live_form = get_form_from_parsed_matches(team_name, competition=competition) or get_form_from_parsed_matches(resolved_name, competition=competition)
     if live_form:
         _form_cache[cache_key] = (datetime.now(), live_form)
         return live_form
 
     # PRIORITÀ 1.5: data/*.csv (dati storici reali da football-data.co.uk)
-    training_form = get_form_from_training_data(team_name) or get_form_from_training_data(resolved_name)
+    training_form = get_form_from_training_data(team_name, competition=competition) or get_form_from_training_data(resolved_name, competition=competition)
     if training_form:
         _form_cache[cache_key] = (datetime.now(), training_form)
         return training_form
 
-    # PRIORITÀ 2: API-Football (stagione 2024/25 - piano gratuito)
+    # PRIORITÀ 2: API-Football (piano gratuito)
     try:
         apifootball = get_apifootball_engine()
         if apifootball.api_key:
@@ -391,7 +412,7 @@ def get_team_form_with_details(team_name: str, use_real_data: bool = True) -> Di
                         'matches': matches
                     }
                     _form_cache[cache_key] = (datetime.now(), result)
-                    logger.info(f"Forma per {team_name}: {form_str} da API-Football (stagione 2024/25)")
+                    logger.info(f"Forma per {team_name}: {form_str} da API-Football")
                     return result
 
     except Exception as e:

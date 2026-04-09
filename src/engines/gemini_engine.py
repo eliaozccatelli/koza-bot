@@ -504,12 +504,12 @@ Rispondi SOLO con il JSON valido."""
         if forma_casa:
             source = forma_casa.get('source', 'static')
             source_tags = {
-                'telegram_live': 'dati live gruppo',
-                'training_data': 'dati reali stagione',
-                'apifootball': 'dati API',
+                'telegram_live': 'dati live (aggiornati da scraper)',
+                'training_data': 'dati reali storici',
+                'apifootball': 'dati reali da API',
                 'rapidapi': 'dati live',
             }
-            tag = source_tags.get(source, 'approssimativo')
+            tag = source_tags.get(source, 'approssimativi')
             form_str = forma_casa.get('form', '?')
             w = forma_casa.get('wins', 0)
             d = forma_casa.get('draws', 0)
@@ -519,19 +519,26 @@ Rispondi SOLO con il JSON valido."""
             line = f"- {casa}: Forma ultime 5 = {form_str} ({w}V-{d}P-{l}S"
             if gf or ga:
                 line += f", {gf} gol fatti, {ga} subiti"
-            line += f") [{tag}]"
+            line += f") [Dati completi: {tag}]"
             lines.append(line)
+            
+            # Aggiungi i singoli match se presenti
+            matches_casa = forma_casa.get('matches', [])
+            if matches_casa:
+                lines.append("  Ultime partite (dalla più recente):")
+                for m in matches_casa:
+                    lines.append(f"  * {m.get('date', '?')}: {casa} vs {m.get('opponent', '?')} | Risultato: {m.get('score', '?')} ({m.get('result', '?')})")
 
         # Forma trasferta
         if forma_trasferta:
             source = forma_trasferta.get('source', 'static')
             source_tags = {
-                'telegram_live': 'dati live gruppo',
-                'training_data': 'dati reali stagione',
-                'apifootball': 'dati API',
+                'telegram_live': 'dati live (aggiornati da scraper)',
+                'training_data': 'dati reali storici',
+                'apifootball': 'dati reali da API',
                 'rapidapi': 'dati live',
             }
-            tag = source_tags.get(source, 'approssimativo')
+            tag = source_tags.get(source, 'approssimativi')
             form_str = forma_trasferta.get('form', '?')
             w = forma_trasferta.get('wins', 0)
             d = forma_trasferta.get('draws', 0)
@@ -541,8 +548,15 @@ Rispondi SOLO con il JSON valido."""
             line = f"- {trasferta}: Forma ultime 5 = {form_str} ({w}V-{d}P-{l}S"
             if gf or ga:
                 line += f", {gf} gol fatti, {ga} subiti"
-            line += f") [{tag}]"
+            line += f") [Dati completi: {tag}]"
             lines.append(line)
+
+            # Aggiungi i singoli match se presenti
+            matches_trasf = forma_trasferta.get('matches', [])
+            if matches_trasf:
+                lines.append("  Ultime partite (dalla più recente):")
+                for m in matches_trasf:
+                    lines.append(f"  * {m.get('date', '?')}: {trasferta} vs {m.get('opponent', '?')} | Risultato: {m.get('score', '?')} ({m.get('result', '?')})")
 
         # Rating
         if rating_casa and rating_trasferta:

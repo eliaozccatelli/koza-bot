@@ -121,10 +121,10 @@ LEAGUE_ID = 2019  # Serie A default
 
 
 
-# Stagione corrente (2024 = stagione 2024/25)
-
-SEASON = 2024
-
+# Stagione corrente (calcolata dinamicamente)
+from datetime import datetime
+_current_year = datetime.now().year
+SEASON = _current_year if datetime.now().month >= 8 else _current_year - 1
 
 
 # Numero massimo di scontri diretti da considerare

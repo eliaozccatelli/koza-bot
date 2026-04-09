@@ -57,3 +57,586 @@ Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,Competition
 2026-04-06,Metz,Nantes,0,0,D,Ligue 1
 2026-04-06,Monaco,Marsiglia,2,1,H,Ligue 1
 2026-04-07,Girona,Aston Villa,1,0,H,Unknown
+2026-01-08,Cremonese,Cagliari,2,2,D,Serie A
+2026-01-08,Milan,Genoa,1,1,D,Serie A
+2026-01-10,Como,Bologna,1,1,D,Serie A
+2026-01-10,Udinese,Pisa,2,2,D,Serie A
+2026-01-10,Roma,Sassuolo,2,0,H,Serie A
+2026-01-10,Atalanta,Torino,2,0,H,Serie A
+2026-01-11,Lecce,Parma,1,2,A,Serie A
+2026-01-11,Fiorentina,Milan,1,1,D,Serie A
+2026-01-11,Verona,Lazio,0,1,A,Serie A
+2026-01-11,Inter,Napoli,2,2,D,Serie A
+2026-01-12,Genoa,Cagliari,3,0,H,Serie A
+2026-01-12,Juventus,Cremonese,5,0,H,Serie A
+2026-01-14,Napoli,Parma,0,0,D,Serie A
+2026-01-14,Inter,Lecce,1,0,H,Serie A
+2026-01-15,Verona,Bologna,2,3,A,Serie A
+2026-01-15,Como,Milan,1,3,A,Serie A
+2026-01-16,Pisa,Atalanta,1,1,D,Serie A
+2026-01-17,Udinese,Inter,0,1,A,Serie A
+2026-01-17,Napoli,Sassuolo,1,0,H,Serie A
+2026-01-17,Cagliari,Juventus,1,0,H,Serie A
+2026-01-18,Parma,Genoa,0,0,D,Serie A
+2026-01-18,Bologna,Fiorentina,1,2,A,Serie A
+2026-01-18,Torino,Roma,0,2,A,Serie A
+2026-01-18,Milan,Lecce,1,0,H,Serie A
+2026-01-19,Cremonese,Verona,0,0,D,Serie A
+2026-01-19,Lazio,Como,0,3,A,Serie A
+2026-01-23,Inter,Pisa,6,2,H,Serie A
+2026-01-24,Como,Torino,6,0,H,Serie A
+2026-01-24,Fiorentina,Cagliari,1,2,A,Serie A
+2026-01-24,Lecce,Lazio,0,0,D,Serie A
+2026-01-25,Sassuolo,Cremonese,1,0,H,Serie A
+2026-01-25,Atalanta,Parma,4,0,H,Serie A
+2026-01-25,Genoa,Bologna,3,2,H,Serie A
+2026-01-25,Juventus,Napoli,3,0,H,Serie A
+2026-01-25,Roma,Milan,1,1,D,Serie A
+2026-01-26,Verona,Udinese,1,3,A,Serie A
+2026-01-30,Lazio,Genoa,3,2,H,Serie A
+2026-01-31,Pisa,Sassuolo,1,3,A,Serie A
+2026-01-31,Napoli,Fiorentina,2,1,H,Serie A
+2026-01-31,Cagliari,Verona,4,0,H,Serie A
+2026-02-01,Torino,Lecce,1,0,H,Serie A
+2026-02-01,Como,Atalanta,0,0,D,Serie A
+2026-02-01,Cremonese,Inter,0,2,A,Serie A
+2026-02-01,Parma,Juventus,1,4,A,Serie A
+2026-02-02,Udinese,Roma,1,0,H,Serie A
+2026-02-03,Bologna,Milan,0,3,A,Serie A
+2026-02-06,Verona,Pisa,0,0,D,Serie A
+2026-02-07,Genoa,Napoli,2,3,A,Serie A
+2026-02-07,Fiorentina,Torino,2,2,D,Serie A
+2026-02-08,Bologna,Parma,0,1,A,Serie A
+2026-02-08,Lecce,Udinese,2,1,H,Serie A
+2026-02-08,Sassuolo,Inter,0,5,A,Serie A
+2026-02-08,Juventus,Lazio,2,2,D,Serie A
+2026-02-09,Atalanta,Cremonese,2,1,H,Serie A
+2026-02-09,Roma,Cagliari,2,0,H,Serie A
+2026-02-13,Pisa,Milan,1,2,A,Serie A
+2026-02-14,Como,Fiorentina,1,2,A,Serie A
+2026-02-14,Lazio,Atalanta,0,2,A,Serie A
+2026-02-14,Inter,Juventus,3,2,H,Serie A
+2026-02-15,Udinese,Sassuolo,1,2,A,Serie A
+2026-02-15,Parma,Verona,2,1,H,Serie A
+2026-02-15,Cremonese,Genoa,0,0,D,Serie A
+2026-02-15,Torino,Bologna,1,2,A,Serie A
+2026-02-15,Napoli,Roma,2,2,D,Serie A
+2026-02-16,Cagliari,Lecce,0,2,A,Serie A
+2026-02-18,Milan,Como,1,1,D,Serie A
+2026-02-20,Sassuolo,Verona,3,0,H,Serie A
+2026-02-21,Juventus,Como,0,2,A,Serie A
+2026-02-21,Lecce,Inter,0,2,A,Serie A
+2026-02-21,Cagliari,Lazio,0,0,D,Serie A
+2026-02-22,Genoa,Torino,3,0,H,Serie A
+2026-02-22,Atalanta,Napoli,2,1,H,Serie A
+2026-02-22,Milan,Parma,0,1,A,Serie A
+2026-02-22,Roma,Cremonese,3,0,H,Serie A
+2026-02-23,Fiorentina,Pisa,1,0,H,Serie A
+2026-02-23,Bologna,Udinese,1,0,H,Serie A
+2026-02-27,Parma,Cagliari,1,1,D,Serie A
+2026-02-28,Como,Lecce,3,1,H,Serie A
+2026-02-28,Verona,Napoli,1,2,A,Serie A
+2026-02-28,Inter,Genoa,2,0,H,Serie A
+2026-03-01,Cremonese,Milan,0,2,A,Serie A
+2026-03-01,Sassuolo,Atalanta,2,1,H,Serie A
+2026-03-01,Torino,Lazio,2,0,H,Serie A
+2026-03-01,Roma,Juventus,3,3,D,Serie A
+2026-03-02,Pisa,Bologna,0,1,A,Serie A
+2026-03-02,Udinese,Fiorentina,3,0,H,Serie A
+2026-03-06,Napoli,Torino,2,1,H,Serie A
+2026-03-07,Cagliari,Como,1,2,A,Serie A
+2026-03-07,Atalanta,Udinese,2,2,D,Serie A
+2026-03-07,Juventus,Pisa,4,0,H,Serie A
+2026-03-08,Lecce,Cremonese,2,1,H,Serie A
+2026-03-08,Bologna,Verona,1,2,A,Serie A
+2026-03-08,Fiorentina,Parma,0,0,D,Serie A
+2026-03-08,Genoa,Roma,2,1,H,Serie A
+2026-03-08,Milan,Inter,1,0,H,Serie A
+2026-03-09,Lazio,Sassuolo,2,1,H,Serie A
+2026-03-13,Torino,Parma,4,1,H,Serie A
+2026-03-14,Inter,Atalanta,1,1,D,Serie A
+2026-03-14,Napoli,Lecce,2,1,H,Serie A
+2026-03-14,Udinese,Juventus,0,1,A,Serie A
+2026-03-15,Verona,Genoa,0,2,A,Serie A
+2026-03-15,Pisa,Cagliari,3,1,H,Serie A
+2026-03-15,Sassuolo,Bologna,0,1,A,Serie A
+2026-03-15,Como,Roma,2,1,H,Serie A
+2026-03-15,Lazio,Milan,1,0,H,Serie A
+2026-03-16,Cremonese,Fiorentina,1,4,A,Serie A
+2026-03-20,Cagliari,Napoli,0,1,A,Serie A
+2026-03-20,Genoa,Udinese,0,2,A,Serie A
+2026-03-21,Parma,Cremonese,0,2,A,Serie A
+2026-03-21,Milan,Torino,3,2,H,Serie A
+2026-03-21,Juventus,Sassuolo,1,1,D,Serie A
+2026-03-22,Como,Pisa,5,0,H,Serie A
+2026-03-22,Atalanta,Verona,1,0,H,Serie A
+2026-03-22,Bologna,Lazio,0,2,A,Serie A
+2026-03-22,Roma,Lecce,1,0,H,Serie A
+2026-03-22,Fiorentina,Inter,1,1,D,Serie A
+2026-04-04,Sassuolo,Cagliari,2,1,H,Serie A
+2026-04-04,Verona,Fiorentina,0,1,A,Serie A
+2026-04-04,Lazio,Parma,1,1,D,Serie A
+2026-04-05,Cremonese,Bologna,1,2,A,Serie A
+2026-04-05,Pisa,Torino,0,1,A,Serie A
+2026-04-05,Inter,Roma,5,2,H,Serie A
+2026-04-06,Udinese,Como,0,0,D,Serie A
+2026-04-06,Lecce,Atalanta,0,3,A,Serie A
+2026-04-06,Juventus,Genoa,2,0,H,Serie A
+2026-04-06,Napoli,Milan,1,0,H,Serie A
+2026-01-08,Arsenal,Liverpool,0,0,D,Premier League
+2026-01-17,Man United,Man City,2,0,H,Premier League
+2026-01-17,Sunderland AFC,Crystal Palace,2,1,H,Premier League
+2026-01-17,Chelsea,Brentford,2,0,H,Premier League
+2026-01-17,Liverpool,Burnley,1,1,D,Premier League
+2026-01-17,Leeds United,Fulham,1,0,H,Premier League
+2026-01-17,Tottenham,West Ham,1,2,A,Premier League
+2026-01-17,Nottingham Forest,Arsenal,0,0,D,Premier League
+2026-01-18,Wolves,Newcastle,0,0,D,Premier League
+2026-01-18,Aston Villa,Everton,0,1,A,Premier League
+2026-01-19,Brighton,Bournemouth,1,1,D,Premier League
+2026-01-24,West Ham,Sunderland AFC,3,1,H,Premier League
+2026-01-24,Burnley,Tottenham,2,2,D,Premier League
+2026-01-24,Fulham,Brighton,2,1,H,Premier League
+2026-01-24,Man City,Wolves,2,0,H,Premier League
+2026-01-24,Bournemouth,Liverpool,3,2,H,Premier League
+2026-01-25,Crystal Palace,Chelsea,1,3,A,Premier League
+2026-01-25,Brentford,Nottingham Forest,0,2,A,Premier League
+2026-01-25,Newcastle,Aston Villa,0,2,A,Premier League
+2026-01-25,Arsenal,Man United,2,3,A,Premier League
+2026-01-26,Everton,Leeds United,1,1,D,Premier League
+2026-01-31,Brighton,Everton,1,1,D,Premier League
+2026-01-31,Leeds United,Arsenal,0,4,A,Premier League
+2026-01-31,Wolves,Bournemouth,0,2,A,Premier League
+2026-01-31,Chelsea,West Ham,3,2,H,Premier League
+2026-01-31,Liverpool,Newcastle,4,1,H,Premier League
+2026-02-01,Aston Villa,Brentford,0,1,A,Premier League
+2026-02-01,Man United,Fulham,3,2,H,Premier League
+2026-02-01,Nottingham Forest,Crystal Palace,1,1,D,Premier League
+2026-02-01,Tottenham,Man City,2,2,D,Premier League
+2026-02-02,Sunderland AFC,Burnley,3,0,H,Premier League
+2026-02-06,Leeds United,Nottingham Forest,3,1,H,Premier League
+2026-02-07,Man United,Tottenham,2,0,H,Premier League
+2026-02-07,Bournemouth,Aston Villa,1,1,D,Premier League
+2026-02-07,Arsenal,Sunderland AFC,3,0,H,Premier League
+2026-02-07,Burnley,West Ham,0,2,A,Premier League
+2026-02-07,Fulham,Everton,1,2,A,Premier League
+2026-02-07,Wolves,Chelsea,1,3,A,Premier League
+2026-02-07,Newcastle,Brentford,2,3,A,Premier League
+2026-02-08,Brighton,Crystal Palace,0,1,A,Premier League
+2026-02-08,Liverpool,Man City,1,2,A,Premier League
+2026-02-10,Chelsea,Leeds United,2,2,D,Premier League
+2026-02-10,Everton,Bournemouth,1,2,A,Premier League
+2026-02-10,Tottenham,Newcastle,1,2,A,Premier League
+2026-02-10,West Ham,Man United,1,1,D,Premier League
+2026-02-11,Aston Villa,Brighton,1,0,H,Premier League
+2026-02-11,Man City,Fulham,3,0,H,Premier League
+2026-02-11,Nottingham Forest,Wolves,0,0,D,Premier League
+2026-02-11,Crystal Palace,Burnley,2,3,A,Premier League
+2026-02-11,Sunderland AFC,Liverpool,0,1,A,Premier League
+2026-02-12,Brentford,Arsenal,1,1,D,Premier League
+2026-02-18,Wolves,Arsenal,2,2,D,Premier League
+2026-02-21,Aston Villa,Leeds United,1,1,D,Premier League
+2026-02-21,Brentford,Brighton,0,2,A,Premier League
+2026-02-21,Chelsea,Burnley,1,1,D,Premier League
+2026-02-21,West Ham,Bournemouth,0,0,D,Premier League
+2026-02-21,Man City,Newcastle,2,1,H,Premier League
+2026-02-22,Sunderland AFC,Fulham,1,3,A,Premier League
+2026-02-22,Crystal Palace,Wolves,1,0,H,Premier League
+2026-02-22,Nottingham Forest,Liverpool,0,1,A,Premier League
+2026-02-22,Tottenham,Arsenal,1,4,A,Premier League
+2026-02-23,Everton,Man United,0,1,A,Premier League
+2026-02-27,Wolves,Aston Villa,2,0,H,Premier League
+2026-02-28,Bournemouth,Sunderland AFC,1,1,D,Premier League
+2026-02-28,Burnley,Brentford,3,4,A,Premier League
+2026-02-28,Liverpool,West Ham,5,2,H,Premier League
+2026-02-28,Newcastle,Everton,2,3,A,Premier League
+2026-02-28,Leeds United,Man City,0,1,A,Premier League
+2026-03-01,Brighton,Nottingham Forest,2,1,H,Premier League
+2026-03-01,Fulham,Tottenham,2,1,H,Premier League
+2026-03-01,Man United,Crystal Palace,2,1,H,Premier League
+2026-03-01,Arsenal,Chelsea,2,1,H,Premier League
+2026-03-03,Bournemouth,Brentford,0,0,D,Premier League
+2026-03-03,Everton,Burnley,2,0,H,Premier League
+2026-03-03,Leeds United,Sunderland AFC,0,1,A,Premier League
+2026-03-03,Wolves,Liverpool,2,1,H,Premier League
+2026-03-04,Aston Villa,Chelsea,1,4,A,Premier League
+2026-03-04,Brighton,Arsenal,0,1,A,Premier League
+2026-03-04,Fulham,West Ham,0,1,A,Premier League
+2026-03-04,Man City,Nottingham Forest,2,2,D,Premier League
+2026-03-04,Newcastle,Man United,2,1,H,Premier League
+2026-03-05,Tottenham,Crystal Palace,1,3,A,Premier League
+2026-03-14,Sunderland AFC,Brighton,0,1,A,Premier League
+2026-03-14,Burnley,Bournemouth,0,0,D,Premier League
+2026-03-14,Arsenal,Everton,2,0,H,Premier League
+2026-03-14,Chelsea,Newcastle,0,1,A,Premier League
+2026-03-14,West Ham,Man City,1,1,D,Premier League
+2026-03-15,Crystal Palace,Leeds United,0,0,D,Premier League
+2026-03-15,Man United,Aston Villa,3,1,H,Premier League
+2026-03-15,Nottingham Forest,Fulham,0,0,D,Premier League
+2026-03-15,Liverpool,Tottenham,1,1,D,Premier League
+2026-03-16,Brentford,Wolves,2,2,D,Premier League
+2026-03-20,Bournemouth,Man United,2,2,D,Premier League
+2026-03-21,Leeds United,Brentford,0,0,D,Premier League
+2026-03-22,Newcastle,Sunderland AFC,1,2,A,Premier League
+2026-03-22,Tottenham,Nottingham Forest,0,3,A,Premier League
+2026-01-09,Getafe,Real Sociedad,1,2,A,La Liga
+2026-01-10,Real Oviedo,Betis,1,1,D,La Liga
+2026-01-10,Villarreal,Alaves,3,1,H,La Liga
+2026-01-10,Girona,Osasuna,1,0,H,La Liga
+2026-01-10,Valencia,Elche,1,1,D,La Liga
+2026-01-11,Rayo Vallecano,Mallorca,2,1,H,La Liga
+2026-01-11,Levante,Espanyol,1,1,D,La Liga
+2026-01-12,Siviglia,Celta Vigo,0,1,A,La Liga
+2026-01-16,Espanyol,Girona,0,2,A,La Liga
+2026-01-17,Real Madrid,Levante,2,0,H,La Liga
+2026-01-17,Mallorca,Athletic Bilbao,3,2,H,La Liga
+2026-01-17,Osasuna,Real Oviedo,3,2,H,La Liga
+2026-01-17,Betis,Villarreal,2,0,H,La Liga
+2026-01-18,Getafe,Valencia,0,1,A,La Liga
+2026-01-18,Atletico Madrid,Alaves,1,0,H,La Liga
+2026-01-18,Celta Vigo,Rayo Vallecano,3,0,H,La Liga
+2026-01-18,Real Sociedad,Barcelona,2,1,H,La Liga
+2026-01-19,Elche,Siviglia,2,2,D,La Liga
+2026-01-23,Levante,Elche,3,2,H,La Liga
+2026-01-24,Rayo Vallecano,Osasuna,1,3,A,La Liga
+2026-01-24,Valencia,Espanyol,3,2,H,La Liga
+2026-01-24,Siviglia,Athletic Bilbao,2,1,H,La Liga
+2026-01-24,Villarreal,Real Madrid,0,2,A,La Liga
+2026-01-25,Atletico Madrid,Mallorca,3,0,H,La Liga
+2026-01-25,Barcelona,Real Oviedo,3,0,H,La Liga
+2026-01-25,Real Sociedad,Celta Vigo,3,1,H,La Liga
+2026-01-25,Alaves,Betis,2,1,H,La Liga
+2026-01-26,Girona,Getafe,1,1,D,La Liga
+2026-01-30,Espanyol,Alaves,1,2,A,La Liga
+2026-01-31,Real Oviedo,Girona,1,0,H,La Liga
+2026-01-31,Osasuna,Villarreal,2,2,D,La Liga
+2026-01-31,Levante,Atletico Madrid,0,0,D,La Liga
+2026-01-31,Elche,Barcelona,1,3,A,La Liga
+2026-02-01,Real Madrid,Rayo Vallecano,2,1,H,La Liga
+2026-02-01,Betis,Valencia,2,1,H,La Liga
+2026-02-01,Getafe,Celta Vigo,0,0,D,La Liga
+2026-02-01,Athletic Bilbao,Real Sociedad,1,1,D,La Liga
+2026-02-02,Mallorca,Siviglia,4,1,H,La Liga
+2026-02-06,Celta Vigo,Osasuna,1,2,A,La Liga
+2026-02-07,Barcelona,Mallorca,3,0,H,La Liga
+2026-02-07,Real Sociedad,Elche,3,1,H,La Liga
+2026-02-08,Alaves,Getafe,0,2,A,La Liga
+2026-02-08,Athletic Bilbao,Levante,4,2,H,La Liga
+2026-02-08,Siviglia,Girona,1,1,D,La Liga
+2026-02-08,Atletico Madrid,Betis,0,1,A,La Liga
+2026-02-08,Valencia,Real Madrid,0,2,A,La Liga
+2026-02-09,Villarreal,Espanyol,4,1,H,La Liga
+2026-02-13,Elche,Osasuna,0,0,D,La Liga
+2026-02-14,Espanyol,Celta Vigo,2,2,D,La Liga
+2026-02-14,Getafe,Villarreal,2,1,H,La Liga
+2026-02-14,Siviglia,Alaves,1,1,D,La Liga
+2026-02-14,Real Madrid,Real Sociedad,4,1,H,La Liga
+2026-02-15,Real Oviedo,Athletic Bilbao,1,2,A,La Liga
+2026-02-15,Rayo Vallecano,Atletico Madrid,3,0,H,La Liga
+2026-02-15,Levante,Valencia,0,2,A,La Liga
+2026-02-15,Mallorca,Betis,1,2,A,La Liga
+2026-02-16,Girona,Barcelona,2,1,H,La Liga
+2026-02-18,Levante,Villarreal,0,1,A,La Liga
+2026-02-20,Athletic Bilbao,Elche,2,1,H,La Liga
+2026-02-21,Real Sociedad,Real Oviedo,3,3,D,La Liga
+2026-02-21,Betis,Rayo Vallecano,1,1,D,La Liga
+2026-02-21,Osasuna,Real Madrid,2,1,H,La Liga
+2026-02-21,Atletico Madrid,Espanyol,4,2,H,La Liga
+2026-02-22,Getafe,Siviglia,0,1,A,La Liga
+2026-02-22,Barcelona,Levante,3,0,H,La Liga
+2026-02-22,Celta Vigo,Mallorca,2,0,H,La Liga
+2026-02-22,Villarreal,Valencia,2,1,H,La Liga
+2026-02-23,Alaves,Girona,2,2,D,La Liga
+2026-02-27,Levante,Alaves,2,0,H,La Liga
+2026-02-28,Rayo Vallecano,Athletic Bilbao,1,1,D,La Liga
+2026-02-28,Barcelona,Villarreal,4,1,H,La Liga
+2026-02-28,Mallorca,Real Sociedad,0,1,A,La Liga
+2026-02-28,Real Oviedo,Atletico Madrid,0,1,A,La Liga
+2026-03-01,Elche,Espanyol,2,2,D,La Liga
+2026-03-01,Valencia,Osasuna,1,0,H,La Liga
+2026-03-01,Betis,Siviglia,2,2,D,La Liga
+2026-03-01,Girona,Celta Vigo,1,2,A,La Liga
+2026-03-02,Real Madrid,Getafe,0,1,A,La Liga
+2026-03-04,Rayo Vallecano,Real Oviedo,3,0,H,La Liga
+2026-03-06,Celta Vigo,Real Madrid,1,2,A,La Liga
+2026-03-07,Osasuna,Mallorca,2,2,D,La Liga
+2026-03-07,Levante,Girona,1,1,D,La Liga
+2026-03-07,Atletico Madrid,Real Sociedad,3,2,H,La Liga
+2026-03-07,Athletic Bilbao,Barcelona,0,1,A,La Liga
+2026-03-08,Villarreal,Elche,2,1,H,La Liga
+2026-03-08,Getafe,Betis,2,0,H,La Liga
+2026-03-08,Siviglia,Rayo Vallecano,1,1,D,La Liga
+2026-03-08,Valencia,Alaves,3,2,H,La Liga
+2026-03-09,Espanyol,Real Oviedo,1,1,D,La Liga
+2026-03-13,Alaves,Villarreal,1,1,D,La Liga
+2026-03-14,Girona,Athletic Bilbao,3,0,H,La Liga
+2026-03-14,Atletico Madrid,Getafe,1,0,H,La Liga
+2026-03-14,Real Oviedo,Valencia,1,0,H,La Liga
+2026-03-14,Real Madrid,Elche,4,1,H,La Liga
+2026-03-15,Mallorca,Espanyol,2,1,H,La Liga
+2026-03-15,Barcelona,Siviglia,5,2,H,La Liga
+2026-03-15,Betis,Celta Vigo,1,1,D,La Liga
+2026-03-15,Real Sociedad,Osasuna,3,1,H,La Liga
+2026-03-16,Rayo Vallecano,Levante,1,1,D,La Liga
+2026-03-20,Villarreal,Real Sociedad,3,1,H,La Liga
+2026-04-06,Girona,Villarreal,1,0,H,La Liga
+2026-01-09,Eintracht Francoforte,Dortmund,3,3,D,Bundesliga
+2026-01-10,Friburgo,Amburgo,2,1,H,Bundesliga
+2026-01-10,Union Berlin,Mainz,2,2,D,Bundesliga
+2026-01-10,Heidenheim,Koln,2,2,D,Bundesliga
+2026-01-10,Leverkusen,Stoccarda,1,4,A,Bundesliga
+2026-01-11,Gladbach,Augsburg,4,0,H,Bundesliga
+2026-01-11,Bayern Monaco,Wolfsburg,8,1,H,Bundesliga
+2026-01-13,Stoccarda,Eintracht Francoforte,3,2,H,Bundesliga
+2026-01-13,Dortmund,Werder Bremen,3,0,H,Bundesliga
+2026-01-13,Mainz,Heidenheim,2,1,H,Bundesliga
+2026-01-14,Wolfsburg,Pauli,2,1,H,Bundesliga
+2026-01-14,Lipsia,Friburgo,2,0,H,Bundesliga
+2026-01-14,Hoffenheim,Gladbach,5,1,H,Bundesliga
+2026-01-14,Koln,Bayern Monaco,1,3,A,Bundesliga
+2026-01-15,Augsburg,Union Berlin,1,1,D,Bundesliga
+2026-01-16,Werder Bremen,Eintracht Francoforte,3,3,D,Bundesliga
+2026-01-17,Hoffenheim,Leverkusen,1,0,H,Bundesliga
+2026-01-17,Koln,Mainz,2,1,H,Bundesliga
+2026-01-17,Amburgo,Gladbach,0,0,D,Bundesliga
+2026-01-17,Dortmund,Pauli,3,2,H,Bundesliga
+2026-01-17,Wolfsburg,Heidenheim,1,1,D,Bundesliga
+2026-01-17,Lipsia,Bayern Monaco,1,5,A,Bundesliga
+2026-01-18,Stoccarda,Union Berlin,1,1,D,Bundesliga
+2026-01-18,Augsburg,Friburgo,2,2,D,Bundesliga
+2026-01-23,Pauli,Amburgo,0,0,D,Bundesliga
+2026-01-24,Heidenheim,Lipsia,0,3,A,Bundesliga
+2026-01-24,Leverkusen,Werder Bremen,1,0,H,Bundesliga
+2026-01-24,Mainz,Wolfsburg,3,1,H,Bundesliga
+2026-01-24,Bayern Monaco,Augsburg,1,2,A,Bundesliga
+2026-01-24,Eintracht Francoforte,Hoffenheim,1,3,A,Bundesliga
+2026-01-24,Union Berlin,Dortmund,0,3,A,Bundesliga
+2026-01-25,Gladbach,Stoccarda,0,3,A,Bundesliga
+2026-01-25,Friburgo,Koln,2,1,H,Bundesliga
+2026-01-27,Werder Bremen,Hoffenheim,0,2,A,Bundesliga
+2026-01-27,Pauli,Lipsia,1,1,D,Bundesliga
+2026-01-30,Koln,Wolfsburg,1,0,H,Bundesliga
+2026-01-31,Eintracht Francoforte,Leverkusen,1,3,A,Bundesliga
+2026-01-31,Lipsia,Mainz,1,2,A,Bundesliga
+2026-01-31,Werder Bremen,Gladbach,1,1,D,Bundesliga
+2026-01-31,Hoffenheim,Union Berlin,3,1,H,Bundesliga
+2026-01-31,Augsburg,Pauli,2,1,H,Bundesliga
+2026-01-31,Amburgo,Bayern Monaco,2,2,D,Bundesliga
+2026-02-01,Stoccarda,Friburgo,1,0,H,Bundesliga
+2026-02-01,Dortmund,Heidenheim,3,2,H,Bundesliga
+2026-02-06,Union Berlin,Eintracht Francoforte,1,1,D,Bundesliga
+2026-02-07,Wolfsburg,Dortmund,1,2,A,Bundesliga
+2026-02-07,Friburgo,Werder Bremen,1,0,H,Bundesliga
+2026-02-07,Pauli,Stoccarda,2,1,H,Bundesliga
+2026-02-07,Mainz,Augsburg,2,0,H,Bundesliga
+2026-02-07,Heidenheim,Amburgo,0,2,A,Bundesliga
+2026-02-07,Gladbach,Leverkusen,1,1,D,Bundesliga
+2026-02-08,Koln,Lipsia,1,2,A,Bundesliga
+2026-02-08,Bayern Monaco,Hoffenheim,5,1,H,Bundesliga
+2026-02-13,Dortmund,Mainz,4,0,H,Bundesliga
+2026-02-14,Werder Bremen,Bayern Monaco,0,3,A,Bundesliga
+2026-02-14,Hoffenheim,Friburgo,3,0,H,Bundesliga
+2026-02-14,Eintracht Francoforte,Gladbach,3,0,H,Bundesliga
+2026-02-14,Amburgo,Union Berlin,3,2,H,Bundesliga
+2026-02-14,Leverkusen,Pauli,4,0,H,Bundesliga
+2026-02-14,Stoccarda,Koln,3,1,H,Bundesliga
+2026-02-15,Augsburg,Heidenheim,1,0,H,Bundesliga
+2026-02-15,Lipsia,Wolfsburg,2,2,D,Bundesliga
+2026-02-20,Mainz,Amburgo,1,1,D,Bundesliga
+2026-02-21,Union Berlin,Leverkusen,1,0,H,Bundesliga
+2026-02-21,Bayern Monaco,Eintracht Francoforte,3,2,H,Bundesliga
+2026-02-21,Wolfsburg,Augsburg,2,3,A,Bundesliga
+2026-02-21,Koln,Hoffenheim,2,2,D,Bundesliga
+2026-02-21,Lipsia,Dortmund,2,2,D,Bundesliga
+2026-02-22,Friburgo,Gladbach,2,1,H,Bundesliga
+2026-02-22,Pauli,Werder Bremen,2,1,H,Bundesliga
+2026-02-22,Heidenheim,Stoccarda,3,3,D,Bundesliga
+2026-02-27,Augsburg,Koln,2,0,H,Bundesliga
+2026-02-28,Leverkusen,Mainz,1,1,D,Bundesliga
+2026-02-28,Gladbach,Union Berlin,1,0,H,Bundesliga
+2026-02-28,Hoffenheim,Pauli,0,1,A,Bundesliga
+2026-02-28,Werder Bremen,Heidenheim,2,0,H,Bundesliga
+2026-02-28,Dortmund,Bayern Monaco,2,3,A,Bundesliga
+2026-03-01,Stoccarda,Wolfsburg,4,0,H,Bundesliga
+2026-03-01,Eintracht Francoforte,Friburgo,2,0,H,Bundesliga
+2026-03-01,Amburgo,Lipsia,1,2,A,Bundesliga
+2026-03-04,Amburgo,Leverkusen,0,1,A,Bundesliga
+2026-03-06,Bayern Monaco,Gladbach,4,1,H,Bundesliga
+2026-03-07,Friburgo,Leverkusen,3,3,D,Bundesliga
+2026-03-07,Mainz,Stoccarda,2,2,D,Bundesliga
+2026-03-07,Lipsia,Augsburg,2,1,H,Bundesliga
+2026-03-07,Heidenheim,Hoffenheim,2,4,A,Bundesliga
+2026-03-07,Wolfsburg,Amburgo,1,2,A,Bundesliga
+2026-03-07,Koln,Dortmund,1,2,A,Bundesliga
+2026-03-08,Pauli,Eintracht Francoforte,0,0,D,Bundesliga
+2026-03-08,Union Berlin,Werder Bremen,1,4,A,Bundesliga
+2026-03-13,Gladbach,Pauli,2,0,H,Bundesliga
+2026-03-14,Leverkusen,Bayern Monaco,1,1,D,Bundesliga
+2026-03-14,Hoffenheim,Wolfsburg,1,1,D,Bundesliga
+2026-03-14,Dortmund,Augsburg,2,0,H,Bundesliga
+2026-03-14,Eintracht Francoforte,Heidenheim,1,0,H,Bundesliga
+2026-03-14,Amburgo,Koln,1,1,D,Bundesliga
+2026-03-15,Werder Bremen,Mainz,0,2,A,Bundesliga
+2026-03-15,Friburgo,Union Berlin,0,1,A,Bundesliga
+2026-03-15,Stoccarda,Lipsia,1,0,H,Bundesliga
+2026-03-20,Lipsia,Hoffenheim,5,0,H,Bundesliga
+2026-03-21,Koln,Gladbach,3,3,D,Bundesliga
+2026-03-21,Bayern Monaco,Union Berlin,4,0,H,Bundesliga
+2026-04-04,Friburgo,Bayern Monaco,2,3,A,Bundesliga
+2026-04-04,Gladbach,Heidenheim,2,2,D,Bundesliga
+2026-04-05,Union Berlin,Pauli,1,1,D,Bundesliga
+2026-04-05,Eintracht Francoforte,Koln,2,2,D,Bundesliga
+2026-01-16,Monaco,Lorient,1,3,A,Ligue 1
+2026-01-16,PSG,Lille,3,0,H,Ligue 1
+2026-01-17,Lens,Auxerre,1,0,H,Ligue 1
+2026-01-17,Toulouse,Nizza,5,1,H,Ligue 1
+2026-01-17,Angers,Marsiglia,2,5,A,Ligue 1
+2026-01-18,Strasbourg,Metz,2,1,H,Ligue 1
+2026-01-18,Nantes,Paris FC,1,2,A,Ligue 1
+2026-01-18,Rennes,Le Havre,1,1,D,Ligue 1
+2026-01-18,Lione,Brest,2,1,H,Ligue 1
+2026-01-23,Auxerre,PSG,0,1,A,Ligue 1
+2026-01-24,Rennes,Lorient,0,2,A,Ligue 1
+2026-01-24,Le Havre,Monaco,0,0,D,Ligue 1
+2026-01-24,Marsiglia,Lens,3,1,H,Ligue 1
+2026-01-25,Nantes,Nizza,1,4,A,Ligue 1
+2026-01-25,Metz,Lione,2,5,A,Ligue 1
+2026-01-25,Paris FC,Angers,0,0,D,Ligue 1
+2026-01-25,Brest,Toulouse,0,2,A,Ligue 1
+2026-01-25,Lille,Strasbourg,1,4,A,Ligue 1
+2026-01-30,Lens,Le Havre,1,0,H,Ligue 1
+2026-01-31,Paris FC,Marsiglia,2,2,D,Ligue 1
+2026-01-31,Lorient,Nantes,2,1,H,Ligue 1
+2026-01-31,Monaco,Rennes,4,0,H,Ligue 1
+2026-02-01,Lione,Lille,1,0,H,Ligue 1
+2026-02-01,Toulouse,Auxerre,0,0,D,Ligue 1
+2026-02-01,Nizza,Brest,2,2,D,Ligue 1
+2026-02-01,Angers,Metz,1,0,H,Ligue 1
+2026-02-01,Strasbourg,PSG,1,2,A,Ligue 1
+2026-02-06,Metz,Lille,0,0,D,Ligue 1
+2026-02-07,Lens,Rennes,3,1,H,Ligue 1
+2026-02-07,Brest,Lorient,2,0,H,Ligue 1
+2026-02-07,Nantes,Lione,0,1,A,Ligue 1
+2026-02-08,Nizza,Monaco,0,0,D,Ligue 1
+2026-02-08,Le Havre,Strasbourg,2,1,H,Ligue 1
+2026-02-08,Auxerre,Paris FC,0,0,D,Ligue 1
+2026-02-08,Angers,Toulouse,1,0,H,Ligue 1
+2026-02-08,PSG,Marsiglia,5,0,H,Ligue 1
+2026-02-13,Rennes,PSG,3,1,H,Ligue 1
+2026-02-13,Monaco,Nantes,3,1,H,Ligue 1
+2026-02-14,Marsiglia,Strasbourg,2,2,D,Ligue 1
+2026-02-14,Lille,Brest,1,1,D,Ligue 1
+2026-02-14,Paris FC,Lens,0,5,A,Ligue 1
+2026-02-15,Le Havre,Toulouse,2,1,H,Ligue 1
+2026-02-15,Lorient,Angers,2,0,H,Ligue 1
+2026-02-15,Metz,Auxerre,1,3,A,Ligue 1
+2026-02-15,Lione,Nizza,2,0,H,Ligue 1
+2026-02-20,Brest,Marsiglia,2,0,H,Ligue 1
+2026-02-21,Lens,Monaco,2,3,A,Ligue 1
+2026-02-21,Toulouse,Paris FC,1,1,D,Ligue 1
+2026-02-21,PSG,Metz,3,0,H,Ligue 1
+2026-02-22,Auxerre,Rennes,0,3,A,Ligue 1
+2026-02-22,Nantes,Le Havre,2,0,H,Ligue 1
+2026-02-22,Nizza,Lorient,3,3,D,Ligue 1
+2026-02-22,Angers,Lille,0,1,A,Ligue 1
+2026-02-22,Strasbourg,Lione,3,1,H,Ligue 1
+2026-02-27,Strasbourg,Lens,1,1,D,Ligue 1
+2026-02-28,Rennes,Toulouse,1,0,H,Ligue 1
+2026-02-28,Monaco,Angers,2,0,H,Ligue 1
+2026-02-28,Le Havre,PSG,0,1,A,Ligue 1
+2026-03-01,Paris FC,Nizza,1,0,H,Ligue 1
+2026-03-01,Lorient,Auxerre,2,2,D,Ligue 1
+2026-03-01,Metz,Brest,0,1,A,Ligue 1
+2026-03-01,Lille,Nantes,1,0,H,Ligue 1
+2026-03-01,Marsiglia,Lione,3,2,H,Ligue 1
+2026-03-06,PSG,Monaco,1,3,A,Ligue 1
+2026-03-07,Nantes,Angers,0,1,A,Ligue 1
+2026-03-07,Auxerre,Strasbourg,0,0,D,Ligue 1
+2026-03-07,Toulouse,Marsiglia,0,1,A,Ligue 1
+2026-03-08,Lens,Metz,3,0,H,Ligue 1
+2026-03-08,Nizza,Rennes,0,4,A,Ligue 1
+2026-03-08,Lille,Lorient,1,1,D,Ligue 1
+2026-03-08,Brest,Le Havre,2,0,H,Ligue 1
+2026-03-08,Lione,Paris FC,1,1,D,Ligue 1
+2026-03-13,Marsiglia,Auxerre,1,0,H,Ligue 1
+2026-03-14,Lorient,Lens,2,1,H,Ligue 1
+2026-03-14,Angers,Nizza,0,2,A,Ligue 1
+2026-03-14,Monaco,Brest,2,0,H,Ligue 1
+2026-03-15,Strasbourg,Paris FC,0,0,D,Ligue 1
+2026-03-15,Le Havre,Lione,0,0,D,Ligue 1
+2026-03-15,Metz,Toulouse,3,4,A,Ligue 1
+2026-03-15,Rennes,Lille,1,2,A,Ligue 1
+2026-03-20,Lens,Angers,5,1,H,Ligue 1
+2026-03-21,Toulouse,Lorient,1,0,H,Ligue 1
+2026-04-03,PSG,Toulouse,3,1,H,Ligue 1
+2026-04-05,Lorient,Paris FC,1,1,D,Ligue 1
+2026-01-20,FK Kairat,Club Brugge,1,4,A,Champions League
+2026-01-20,FK Bodø/Glimt,Man City,3,1,H,Champions League
+2026-01-20,Tottenham,Dortmund,2,0,H,Champions League
+2026-01-20,Sporting CP,PSG,2,1,H,Champions League
+2026-01-20,PAE Olympiakos SFP,Leverkusen,2,0,H,Champions League
+2026-01-20,Villarreal,AFC Ajax,1,2,A,Champions League
+2026-01-20,FC København,Napoli,1,1,D,Champions League
+2026-01-20,Real Madrid,Monaco,6,1,H,Champions League
+2026-01-20,Inter,Arsenal,1,3,A,Champions League
+2026-01-21,Qarabağ Ağdam FK,Eintracht Francoforte,3,2,H,Champions League
+2026-01-21,Galatasaray SK,Atletico Madrid,1,1,D,Champions League
+2026-01-21,Marsiglia,Liverpool,0,3,A,Champions League
+2026-01-21,SK Slavia Praha,Barcelona,2,4,A,Champions League
+2026-01-21,Atalanta,Athletic Bilbao,2,3,A,Champions League
+2026-01-21,Juventus,Benfica,2,0,H,Champions League
+2026-01-21,Newcastle,PSV,3,0,H,Champions League
+2026-01-21,Bayern Monaco,Royale Union Saint-Gilloise,2,0,H,Champions League
+2026-01-21,Chelsea,Paphos,1,0,H,Champions League
+2026-01-28,Liverpool,Qarabağ Ağdam FK,6,0,H,Champions League
+2026-01-28,Barcelona,FC København,4,1,H,Champions League
+2026-01-28,Man City,Galatasaray SK,2,0,H,Champions League
+2026-01-28,Leverkusen,Villarreal,3,0,H,Champions League
+2026-01-28,Arsenal,FK Kairat,3,2,H,Champions League
+2026-01-28,Royale Union Saint-Gilloise,Atalanta,1,0,H,Champions League
+2026-01-28,Club Brugge,Marsiglia,3,0,H,Champions League
+2026-01-28,Eintracht Francoforte,Tottenham,0,2,A,Champions League
+2026-01-28,Monaco,Juventus,0,0,D,Champions League
+2026-01-28,Atletico Madrid,FK Bodø/Glimt,1,2,A,Champions League
+2026-01-28,Athletic Bilbao,Sporting CP,2,3,A,Champions League
+2026-01-28,AFC Ajax,PAE Olympiakos SFP,1,2,A,Champions League
+2026-01-28,PSG,Newcastle,1,1,D,Champions League
+2026-01-28,Paphos,SK Slavia Praha,4,1,H,Champions League
+2026-01-28,PSV,Bayern Monaco,1,2,A,Champions League
+2026-01-28,Napoli,Chelsea,2,3,A,Champions League
+2026-01-28,Benfica,Real Madrid,4,2,H,Champions League
+2026-01-28,Dortmund,Inter,0,2,A,Champions League
+2026-02-17,Galatasaray SK,Juventus,5,2,H,Champions League
+2026-02-17,Benfica,Real Madrid,0,1,A,Champions League
+2026-02-17,Monaco,PSG,2,3,A,Champions League
+2026-02-17,Dortmund,Atalanta,2,0,H,Champions League
+2026-02-18,Qarabağ Ağdam FK,Newcastle,1,6,A,Champions League
+2026-02-18,Club Brugge,Atletico Madrid,3,3,D,Champions League
+2026-02-18,PAE Olympiakos SFP,Leverkusen,0,2,A,Champions League
+2026-02-18,FK Bodø/Glimt,Inter,3,1,H,Champions League
+2026-02-24,Atletico Madrid,Club Brugge,4,1,H,Champions League
+2026-02-24,Newcastle,Qarabağ Ağdam FK,3,2,H,Champions League
+2026-02-24,Leverkusen,PAE Olympiakos SFP,0,0,D,Champions League
+2026-02-24,Inter,FK Bodø/Glimt,1,2,A,Champions League
+2026-02-25,Atalanta,Dortmund,4,1,H,Champions League
+2026-02-25,Real Madrid,Benfica,2,1,H,Champions League
+2026-02-25,PSG,Monaco,2,2,D,Champions League
+2026-02-25,Juventus,Galatasaray SK,3,2,H,Champions League
+2026-03-10,Galatasaray SK,Liverpool,1,0,H,Champions League
+2026-03-10,Atalanta,Bayern Monaco,1,6,A,Champions League
+2026-03-10,Newcastle,Barcelona,1,1,D,Champions League
+2026-03-10,Atletico Madrid,Tottenham,5,2,H,Champions League
+2026-03-11,Leverkusen,Arsenal,1,1,D,Champions League
+2026-03-11,PSG,Chelsea,5,2,H,Champions League
+2026-03-11,Real Madrid,Man City,3,0,H,Champions League
+2026-03-11,FK Bodø/Glimt,Sporting CP,3,0,H,Champions League
+2026-03-17,Sporting CP,FK Bodø/Glimt,5,0,H,Champions League
+2026-03-17,Chelsea,PSG,0,3,A,Champions League
+2026-03-17,Man City,Real Madrid,1,2,A,Champions League
+2026-03-17,Arsenal,Leverkusen,2,0,H,Champions League
+2026-03-18,Barcelona,Newcastle,7,2,H,Champions League
+2026-03-18,Liverpool,Galatasaray SK,4,0,H,Champions League
+2026-03-18,Bayern Monaco,Atalanta,4,1,H,Champions League
+2026-03-18,Tottenham,Atletico Madrid,3,2,H,Champions League
+2026-04-07,Real Madrid,Bayern Monaco,1,2,A,Champions League
+2026-04-07,Sporting CP,Arsenal,0,1,A,Champions League

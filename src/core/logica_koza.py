@@ -312,13 +312,13 @@ class KozaEngine:
         h2h = None
 
         try:
-            forma_casa = get_team_form_with_details(squadra_casa)
+            forma_casa = get_team_form_with_details(squadra_casa, competition=competizione)
             logger.info(f"Forma {squadra_casa}: {forma_casa.get('form', '?')} (fonte: {forma_casa.get('source', '?')})")
         except Exception as e:
             logger.warning(f"Errore recupero forma {squadra_casa}: {e}")
 
         try:
-            forma_trasferta = get_team_form_with_details(squadra_trasferta)
+            forma_trasferta = get_team_form_with_details(squadra_trasferta, competition=competizione)
             logger.info(f"Forma {squadra_trasferta}: {forma_trasferta.get('form', '?')} (fonte: {forma_trasferta.get('source', '?')})")
         except Exception as e:
             logger.warning(f"Errore recupero forma {squadra_trasferta}: {e}")
@@ -643,8 +643,6 @@ class KozaEngine:
         engine_name = self.ai.get_engine_name(engine_id)
 
         msg = (
-            f"🤖 **ANALISI KOZA - Powered by {engine_name}**\n"
-            f"{'='*45}\n\n"
             f"🏟 **{casa.upper()}** vs **{trasferta.upper()}**\n\n"
         )
 
@@ -676,18 +674,55 @@ class KozaEngine:
         forma_trasf = info_analisi.get('forma_trasferta', '') if info_analisi else ''
         if forma_casa or forma_trasf:
             msg += f"📈 **FORMA**:\n"
-            if forma_casa:
-                msg += f"   {casa}: {forma_casa}\n"
-            if forma_trasf:
-                msg += f"   {trasferta}: {forma_trasf}\n"
+            
+            # Formatta le partite se disponibili nei dati reali
+            forma_src_casa = dati_reali.get("forma_casa", {})
+            forma_src_trasf = dati_reali.get("forma_trasferta", {})
+            
+            for index, (team, forma_ia, forma_src) in enumerate([(casa, forma_casa, forma_src_casa), (trasferta, forma_trasf, forma_src_trasf)]):
+                if forma_ia:
+                    msg += f"   {team}:\n   {forma_ia}\n"
+                
+                # Aggiungi le ultime partite se presenti nell'oggetto dict reale
+                if isinstance(forma_src, dict) and forma_src.get("matches"):
+                    msg += f"   🗓 Ultime partite (dalla più recente):\n"
+                    mesi = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic']
+                    for m in forma_src["matches"]:
+                        date_raw = m.get('date', '?')
+                        try:
+                            # Converte YYYY-MM-DD in DD Mese
+                            d_parts = date_raw.split('-')
+                            if len(d_parts) == 3:
+                                d_str = f"{int(d_parts[2]):02d} {mesi[int(d_parts[1])-1]}"
+                            else:
+                                d_str = date_raw
+                        except:
+                            d_str = date_raw
+                            
+                        # Determina casa/trasferta
+                        venue = m.get('venue', 'home')
+                        opp = m.get('opponent', '?')
+                        if venue == 'home':
+                            opp_str = f"In casa vs {opp}"
+                        else:
+                            opp_str = f"Fuori vs {opp}"
+                            
+                        score = m.get('score', '?')
+                        res = m.get('result', '?').replace('W', 'Vittoria').replace('D', 'Pareggio').replace('L', 'Sconfitta')
+                        msg += f"     • {d_str}: {opp_str} ➔ **{score}** ({res})\n"
+                
+                if index == 0:
+                    msg += "\n"
+                    
             # Indica la fonte dei dati
-            forma_source = dati_reali.get("forma_casa", {})
-            if isinstance(forma_source, dict):
-                src = forma_source.get("source", "static")
+            if isinstance(forma_src_casa, dict):
+                src = forma_src_casa.get("source", "static")
                 if src == "telegram_live":
-                    msg += "   _(dati live stagione corrente)_\n"
+                    msg += "   _(dati live aggiornati da scraper)_\n"
                 elif src == "apifootball":
-                    msg += "   _(dati stagione 2024/25)_\n"
+                    msg += "   _(dati reali da API)_\n"
+                elif src == "training_data":
+                    msg += "   _(dati reali storici)_\n"
                 else:
                     msg += "   _(dati approssimativi)_\n"
             msg += "\n"

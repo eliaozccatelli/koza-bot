@@ -235,7 +235,15 @@
     "le havre": "Le Havre",
     "clermont foot 63": "Clermont",
     "clermont": "Clermont",
-    "paris fc": "Paris FC"
+    "paris fc": "Paris FC",
+    "sporting clube de portugal": "Sporting CP",
+    "sporting cp": "Sporting CP",
+    "sporting lisbona": "Sporting CP",
+    "sporting": "Sporting CP",
+    "sl benfica": "Benfica",
+    "benfica": "Benfica",
+    "fc porto": "Porto",
+    "porto": "Porto"
   },
   "competitions": {
     "Inter": "Serie A", "Milan": "Serie A", "Juventus": "Serie A", "Napoli": "Serie A",
@@ -250,12 +258,13 @@
     "Aston Villa": "Premier League", "Brentford": "Premier League", "Crystal Palace": "Premier League",
     "Everton": "Premier League", "Fulham": "Premier League", "Wolves": "Premier League",
     "Nottingham Forest": "Premier League", "Bournemouth": "Premier League",
-    "PSG": "Ligue 1", "Marsiglia": "Ligue 1", "Lione": "Lione", "Monaco": "Ligue 1",
+    "PSG": "Ligue 1", "Marsiglia": "Ligue 1", "Lione": "Ligue 1", "Monaco": "Ligue 1",
     "Lille": "Ligue 1", "Rennes": "Ligue 1", "Nizza": "Ligue 1", "Strasbourg": "Ligue 1",
     "Lens": "Ligue 1", "Reims": "Ligue 1", "Nantes": "Ligue 1", "Toulouse": "Ligue 1",
     "Bayern Monaco": "Bundesliga", "Dortmund": "Bundesliga", "Leverkusen": "Bundesliga",
     "Lipsia": "Bundesliga", "Stoccarda": "Bundesliga", "Eintracht Francoforte": "Bundesliga",
     "Real Madrid": "La Liga", "Barcelona": "La Liga", "Atletico Madrid": "La Liga",
-    "Girona": "La Liga", "Siviglia": "La Liga", "Betis": "La Liga"
+    "Girona": "La Liga", "Siviglia": "La Liga", "Betis": "La Liga",
+    "Sporting CP": "Liga Portugal", "Benfica": "Liga Portugal", "Porto": "Liga Portugal"
   }
 }

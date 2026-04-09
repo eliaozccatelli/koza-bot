@@ -5,6 +5,11 @@ Unisce dati storici (2024-2026) + dati live (parsed_matches.csv)
 
 import pandas as pd
 import os
+import sys
+
+# Aggiungi root alla path per le importazioni da terminale
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 from datetime import datetime
 from src.ml.ml_predictor import MLMatchPredictor
 

@@ -115,6 +115,10 @@ KNOWN_TEAMS = {
     'cadiz': 'Cadiz', 'mallorca': 'Mallorca', 'las palmas': 'Las Palmas',
     'granada': 'Granada', 'almeria': 'Almeria', 'elche': 'Elche',
     'levante': 'Levante', 'real oviedo': 'Real Oviedo',
+
+    # Portogallo (frequenti in Champions/Europa League)
+    'sporting': 'Sporting CP', 'sporting cp': 'Sporting CP', 'sporting lisbona': 'Sporting CP',
+    'benfica': 'Benfica', 'porto': 'Porto',
 }
 
 # ============================================================
@@ -325,6 +329,33 @@ def parse_match_result(text):
     return None
 
 
+def _detect_competition_from_context(text):
+    """Rileva la competizione dal contesto/titolo del messaggio."""
+    text_lower = text.lower()
+    # Ordine: competizioni internazionali prima (più specifiche)
+    context_map = [
+        ('champions league', 'Champions League'),
+        ('champions', 'Champions League'),
+        ('ucl', 'Champions League'),
+        ('europa league', 'Europa League'),
+        ('conference league', 'Conference League'),
+        ('coppa italia', 'Coppa Italia'),
+        ('copa del rey', 'Copa del Rey'),
+        ('fa cup', 'FA Cup'),
+        ('dfb pokal', 'DFB Pokal'),
+        ('coupe de france', 'Coupe de France'),
+        ('serie a', 'Serie A'),
+        ('premier league', 'Premier League'),
+        ('la liga', 'La Liga'),
+        ('bundesliga', 'Bundesliga'),
+        ('ligue 1', 'Ligue 1'),
+    ]
+    for keyword, competition in context_map:
+        if keyword in text_lower:
+            return competition
+    return None
+
+
 def parse_all_matches_in_message(text):
     """
     Trova TUTTE le partite in un messaggio (supporta messaggi multipli).
@@ -332,6 +363,9 @@ def parse_all_matches_in_message(text):
     """
     if not text:
         return []
+
+    # Rileva competizione dal contesto del messaggio (es. titolo "CHAMPIONS LEAGUE")
+    context_competition = _detect_competition_from_context(text)
 
     results = []
     seen = set()
@@ -345,6 +379,10 @@ def parse_all_matches_in_message(text):
     for line in lines:
         result = parse_match_result(line)
         if result:
+            # Se il contesto indica una competizione internazionale/coppa,
+            # sovrascrive l'inferenza basata sulle leghe delle squadre
+            if context_competition:
+                result['competition'] = context_competition
             key = f"{result['home_team']}_{result['away_team']}_{result['home_goals']}_{result['away_goals']}"
             if key not in seen:
                 seen.add(key)
@@ -378,7 +416,7 @@ def parse_all_matches_in_message(text):
                 else:
                     result_code = 'D'
 
-                competition = infer_competition(home_team, away_team)
+                competition = context_competition or infer_competition(home_team, away_team)
 
                 key = f"{home_team}_{away_team}_{home_goals}_{away_goals}"
                 if key not in seen:
@@ -511,6 +549,11 @@ def save_parsed_match(match_data, filename='parsed_matches.csv'):
     if '\n' in home or '\n' in away or '\r' in home or '\r' in away:
         return False
     if not home or not away or len(home) < 2 or len(away) < 2:
+        return False
+    # Rifiuta nomi che contengono parole spurie (es. da parsing narrativo corrotto)
+    _invalid_words = {'giornata', 'classifica', 'risultat', 'campionato', 'tabellino'}
+    home_lower, away_lower = home.lower(), away.lower()
+    if any(w in home_lower or w in away_lower for w in _invalid_words):
         return False
 
     # Controlla duplicati

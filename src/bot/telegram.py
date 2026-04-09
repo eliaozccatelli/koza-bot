@@ -12,6 +12,8 @@ if sys.platform == 'win32':
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 import logging
+import os
+import subprocess
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import BadRequest
@@ -61,9 +63,9 @@ def get_date_buttons():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /start - mostra selezione data"""
     messaggio = (
-        "⚽ **KOZA Bot 3.0** 🤖\n\n"
+        "👑 **KOZA Bot** ⚽\n\n"
         "Seleziona una data per vedere le partite disponibili:\n\n"
-        "🤖 *Powered by Google Gemini AI*"
+        "✨ _L'intelligenza artificiale al servizio dello sport_"
     )
     
     try:
@@ -246,9 +248,11 @@ async def button_partita(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Fallback: estrai dal match_id (formato: IT1_1)
             squadra1 = "Casa"
             squadra2 = "Trasferta"
-
+        # Recupera data selezionata se disponibile
+        selected_date = context.user_data.get('selected_date')
+        
         # Analisi smart: rileva automaticamente se live/finita/programmata
-        analisi = koza_engine.analizza_partita_smart(squadra1, squadra2, match_id=match_id)
+        analisi = koza_engine.analizza_partita_smart(squadra1, squadra2, match_id=match_id, data=selected_date)
         analisi["squadra_casa"] = squadra1
         analisi["squadra_trasferta"] = squadra2
         messaggio = koza_engine.formatta_output(analisi)
@@ -287,9 +291,9 @@ async def button_indietro(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info("Torno al menu date (back_date)")
             # Invia nuovo messaggio con menu date (lascia l'analisi in chat)
             messaggio = (
-                "⚽ **KOZA Bot 3.0** 🤖\n\n"
+                "👑 **KOZA Bot** ⚽\n\n"
                 "Seleziona una data per vedere le partite disponibili:\n\n"
-                "🤖 *Powered by Google Gemini AI*"
+                "✨ _L'intelligenza artificiale al servizio dello sport_"
             )
             
             date_buttons = get_date_buttons()
@@ -489,7 +493,30 @@ def main():
     global koza_engine
     
     print("🚀 Avvio KOZA Bot 3.0 con Gemini AI...")
-    
+
+    # --- AUTO-UPDATE STARTUP ---
+    # Controlla se parsed_matches.csv è vecchio (più di 12 ore) e aggiorna
+    try:
+        csv_path = 'parsed_matches.csv'
+        run_scraper = False
+        if not os.path.exists(csv_path):
+            run_scraper = True
+        else:
+            mtime = os.path.getmtime(csv_path)
+            last_update = datetime.fromtimestamp(mtime)
+            if datetime.now() - last_update > timedelta(hours=12):
+                run_scraper = True
+
+        if run_scraper:
+            print("📅 Dati risultati non aggiornati. Avvio scraper automatico (ultimi 30 giorni)...")
+            subprocess.run([sys.executable, "scripts/scrape_results.py", "--days", "30"], capture_output=True)
+            print("✅ Risultati aggiornati all'avvio!")
+        else:
+            print("📅 Dati risultati aggiornati (meno di 12 ore fa)")
+    except Exception as e:
+        print(f"⚠️ Errore scraper all'avvio: {e}")
+    # ---------------------------
+
     from src.core.config import GEMINI_API_KEY, TELEGRAM_TOKEN as TOKEN_CHECK
     print(f"🔑 GEMINI_API_KEY caricata: {GEMINI_API_KEY[:20]}..." if GEMINI_API_KEY else "❌ GEMINI_API_KEY NON TROVATA")
     print(f"🔐 TELEGRAM_TOKEN caricato: {TOKEN_CHECK[:10]}..." if TOKEN_CHECK else "❌ TELEGRAM_TOKEN NON TROVATO")
